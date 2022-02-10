@@ -1,10 +1,7 @@
 import json
-import time
 from dataclasses import asdict
-from datetime import datetime, timedelta
 
 import requests
-from bs4 import BeautifulSoup
 from django.conf import settings
 from django.db.models import Count
 from furl import furl
@@ -15,6 +12,7 @@ from core.github_dto import UserInformationDto
 from utils.exceptions import GitHubUserDoesNotExist, RateLimit, manage_api_call_fail, insert_queue
 from core.organization_service import OrganizationService
 from core.repository_service import RepositoryService
+from utils.github import get_continuous_commit_day
 from utils.slack import slack_notify_new_user
 
 FURL = furl('https://api.github.com/')
@@ -120,17 +118,20 @@ class GithubInformationService:
         """
             업데이트 성공 처리
         """
-        count = self.get_continuous_commit_day(self.github_user.username)
-
         self.github_user.status = GithubUser.COMPLETED
         self.github_user.total_contribution = total_contribution
         self.github_user.total_stargazers_count = total_stargazers_count
-        self.github_user.continuous_commit_day = count
+
+        is_completed, continuous_count = get_continuous_commit_day(self.github_user.username)
+        if is_completed:
+            self.github_user.continuous_commit_day = continuous_count
 
         total_score = self.get_total_score(self.github_user)
+        user_rank = self.update_user_ranking(total_score)
+
         self.github_user.total_score = total_score
-        self.github_user.user_rank = self.update_user_ranking(total_score)
-        self.github_user.tier = self.get_tier_statistics(self.github_user.user_rank)
+        self.github_user.user_rank = user_rank
+        self.github_user.tier = self.get_tier_statistics(user_rank)
         self.github_user.save(update_fields=[
             'status', 'updated', 'total_contribution', 'total_stargazers_count',
             'tier', 'continuous_commit_day', 'user_rank', 'total_score'
@@ -141,8 +142,12 @@ class GithubInformationService:
     @staticmethod
     def get_total_score(github_user: GithubUser) -> int:
         # 기여도 - 15%, 1일1커밋(x10) - 75%, 팔로워 - 5%, 팔로잉 - 5%
-        return int(github_user.total_contribution * 0.15 + github_user.continuous_commit_day * 7.5
-                   + github_user.followers * 0.05 + github_user.following * 0.05)
+        return int(
+            github_user.total_contribution * 0.15 +
+            github_user.continuous_commit_day * 7.5 +
+            github_user.followers * 0.05 +
+            github_user.following * 0.05
+        )
 
     @staticmethod
     def get_tier_statistics(user_rank: int) -> int:
@@ -182,28 +187,6 @@ class GithubInformationService:
         return tier
 
     @staticmethod
-    def get_continuous_commit_day(username: str) -> int:
-        time.sleep(0.1)  # 429 에러 때문에 약간의 sleep 을 준다.
-
-        count = 0
-        now = datetime.now() - timedelta(days=1)
-        res = requests.get(f'https://github.com/{username}')
-        soup = BeautifulSoup(res.text, "lxml")  # html.parse 보다 lxml이 더 빠르다고 한다
-
-        for rect in reversed(soup.select('rect')):
-            # 업데이트 당일 전날부터 체크
-            if not rect.get('data-date') or \
-                    now.date() < datetime.strptime(rect.get('data-date'), '%Y-%m-%d').date():
-                continue
-
-            if not rect.get('data-count') or rect.get('data-count') == '0':
-                break
-
-            count += 1
-
-        return count
-
-    @staticmethod
     def update_user_ranking(total_score: int):
         """
         total score 로 전체 유저의 순위를 계산하는 함수
@@ -216,13 +199,13 @@ class GithubInformationService:
         # 0. Github API 호출 가능한지 체크
         self.check_rete_limit()
 
-        # 실제로 github에 존재하는 user인지 체크
+        # 실제로 github 에 존재하는 user 인지 체크
         user_information: UserInformationDto = self.check_github_user()
 
         # 1. GithubUser 가 있는지 체크, 없으면 생성
         self.github_user: GithubUser = self.get_or_create_github_user(user_information)
 
-        # 2. User의 repository 정보를 가져온다
+        # 2. User 의 repository 정보를 가져온다
         params = {'per_page': PER_PAGE, 'page': 1}
         repositories = []
         for i in range(0, (self.github_user.public_repos // PER_PAGE) + 1):

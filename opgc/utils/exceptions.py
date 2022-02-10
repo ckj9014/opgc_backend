@@ -28,6 +28,7 @@ def manage_api_call_fail(
     status_code: int,
     reason: str = None
 ) -> Optional[str]:
+
     if not github_user:
         return None
 

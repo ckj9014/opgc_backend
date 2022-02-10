@@ -1,7 +1,7 @@
 from ckeditor_uploader.fields import RichTextUploadingField
 from django.db import models
 
-from core.models import CustomBaseModel
+from core.db.models import CustomBaseModel
 
 
 class Notice(CustomBaseModel):

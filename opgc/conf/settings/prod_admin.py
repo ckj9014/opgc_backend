@@ -1,5 +1,4 @@
 import os
-from pathlib import Path
 from conf.settings.base import *
 
 
@@ -176,4 +175,5 @@ CACHEOPS_DEFAULTS = {
 CACHEOPS = {
     'githubs.*': {},
     'ranks.*': {},
+    'notices.*': {},
 }

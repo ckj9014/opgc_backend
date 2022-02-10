@@ -5,12 +5,10 @@ import timeit
 
 from chunkator import chunkator
 from django.db import transaction
-from django.db.models import Count
 
 from apps.githubs.models import GithubUser, Language, UserLanguage
 from apps.ranks.models import UserRank
 from core.github_service import GithubInformationService
-from scripts.update_user_information_older_7day import update_github_basic_information
 from utils.exceptions import GitHubUserDoesNotExist
 from utils.slack import slack_update_ranking_system
 
@@ -61,7 +59,8 @@ class RankService(object):
 
         # 랭킹 업데이트 도중 하나라도 오류가 나면 원상복구
         with transaction.atomic():
-            # 최대 10개라 all()로 그냥 가져옴 todo: user가 많아지면 100개로 늘릴예정
+            # 최대 10개라 all()로 그냥 가져옴
+            # todo: user 가 많아지면 100개로 늘릴예정
             for order, data in enumerate(github_user_data):
                 user_rank, is_created = UserRank.objects.get_or_create(type=_type, ranking=order+1)
                 user_rank.github_user_id = data.get('id')
@@ -95,11 +94,9 @@ class RankService(object):
         github_users = GithubUser.objects.all()
         for github_user in chunkator(github_users, 1000):
             try:
-                github_information_service = GithubInformationService(github_user.username)
-                github_user.total_score = github_information_service.get_total_score(github_user)
-                github_user.user_rank = github_information_service.update_user_ranking(github_user.total_score)
-                github_user.tier = github_information_service.get_tier_statistics(github_user.user_rank)
-                github_user.save(update_fields=['total_score', 'user_rank', 'tier'])
+                github_user.user_rank = GithubInformationService.update_user_ranking(github_user.total_score)
+                github_user.tier = GithubInformationService.get_tier_statistics(github_user.user_rank)
+                github_user.save(update_fields=['user_rank', 'tier'])
 
             except GitHubUserDoesNotExist:
                 continue
@@ -108,7 +105,7 @@ class RankService(object):
 def run():
     rank_service = RankService()
 
-    # 먼저 새로 추가된 language가 있으면 추가해준다
+    # 먼저 새로 추가된 language 가 있으면 추가해준다
     for _type in rank_type_model.keys():
         rank_service.create_new_rank(_type=_type)
 

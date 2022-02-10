@@ -1,7 +1,7 @@
 from django.db import models
 
 from apps.githubs.models import GithubUser
-from core.models import CustomBaseModel
+from core.db.models import CustomBaseModel
 
 
 class UserRank(CustomBaseModel):

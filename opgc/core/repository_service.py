@@ -31,7 +31,7 @@ class RepositoryService:
         """
         레포지토리 업데이트 함수
         """
-        # 유저의 현재 모든 repository를 가져온다.
+        # 유저의 현재 모든 repository 를 가져온다.
         user_repositories = list(Repository.objects.filter(github_user=self.github_user))
 
         # loop = asyncio.get_event_loop()
@@ -42,7 +42,7 @@ class RepositoryService:
         if self.new_repository_list:
             Repository.objects.bulk_create(self.new_repository_list)
 
-        # 남아 있는 user_repository는 삭제된 repository라 DB에서도 삭제 해준다.
+        # 남아 있는 user_repository 는 삭제된 repository 라 DB 에서도 삭제 해준다.
         repo_ids = []
         for repo in user_repositories:
             repo_ids.append(repo.id)
@@ -113,7 +113,7 @@ class RepositoryService:
 
     def record_language(self, languages_url: str) -> str:
         """
-        repository 에서 사용중인 언어를 찾아서 dictionary에 type과 count를 저장
+        repository 에서 사용중인 언어를 찾아서 dictionary 에 type 과 count 를 저장
         - count : 해당 언어로 작성된 코드의 바이트 수.
         """
 
@@ -139,7 +139,7 @@ class RepositoryService:
 
     def update_or_create_language(self):
         """
-        새로 추가된 언어를 만들고 User가 사용하는 언어사용 count(byte 수)를 업데이트 해주는 함수
+        새로 추가된 언어를 만들고 User 가 사용하는 언어사용 count(byte 수)를 업데이트 해주는 함수
         """
 
         # DB에 없던 Language 생성
@@ -193,7 +193,7 @@ class RepositoryService:
                 update_fields = []
                 contribution = 0
 
-                # User가 Repository의 contributor 인지 확인한다.
+                # User 가 Repository 의 contributor 인지 확인한다.
                 async with aiohttp.ClientSession() as session:
                     async with session.get(repository.contributors_url, headers=settings.GITHUB_API_HEADER) as res:
                         response_data = await res.text()

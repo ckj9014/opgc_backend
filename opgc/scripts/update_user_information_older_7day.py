@@ -12,6 +12,7 @@ from chunkator import chunkator
 from apps.githubs.models import GithubUser
 from utils.exceptions import RateLimit, insert_queue, GitHubUserDoesNotExist
 from core.github_service import GithubInformationService, USER_UPDATE_FIELDS
+from utils.github import get_continuous_commit_day
 from utils.slack import slack_notify_update_fail, slack_update_older_week_user
 
 
@@ -25,7 +26,7 @@ def update_github_basic_information(github_user: GithubUser):
             if getattr(github_user, key, '') != value:
                 setattr(github_user, key, value)
 
-    github_user.continuous_commit_day = github_information_service.get_continuous_commit_day(github_user.username)
+    github_user.continuous_commit_day = get_continuous_commit_day(github_user.username)
     github_user.total_score = github_information_service.get_total_score(github_user)
     github_user.user_rank = github_information_service.update_user_ranking(github_user.total_score)
     github_user.tier = github_information_service.get_tier_statistics(github_user.user_rank)
@@ -65,7 +66,7 @@ def run():
                 executor.submit(update_github_basic_information, github_user)
                 update_user_count += 1
 
-            except RateLimit:  # rate limit면 다른 유저들도 업데이드 못함
+            except RateLimit:  # rate limit 면 다른 유저들도 업데이드 못함
                 slack_notify_update_fail(
                     message=f'Rate Limit 로 인해 업데이트가 실패되었습니다. {update_user_count}명만 업데이트 되었습니다.😭'
                 )

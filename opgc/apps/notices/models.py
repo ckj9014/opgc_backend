@@ -12,4 +12,3 @@ class Notice(CustomBaseModel):
         db_table = 'notice'
         verbose_name = '공지사항'
         verbose_name_plural = '공지사항'
-

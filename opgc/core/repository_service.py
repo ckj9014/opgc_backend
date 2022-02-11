@@ -21,7 +21,7 @@ class RepositoryService:
         self.total_stargazers_count = 0
         self.repositories = []  # 업데이트할 레포지토리 리스트
         self.new_repository_list = []  # 새로 생성될 레포지토리 리스트
-        self.update_language_dict = {}  # 업데이트할 language
+        self.update_languages = {}  # 업데이트할 language
 
     @staticmethod
     def create_dto(repository_data: dict) -> RepositoryDto:
@@ -67,7 +67,7 @@ class RepositoryService:
         params = {'per_page': PER_PAGE, 'page': 1}
         for i in range(0, (self.github_user.public_repos // PER_PAGE) + 1):
             params['page'] = i + 1
-            res = requests.get(repository.contributors_url, headers=settings.GITHUB_API_HEADER)
+            res = requests.get(repository.contributors_url, headers=settings.GITHUB_API_HEADER, params=params)
 
             if res.status_code != 200:
                 fail_type = manage_api_call_fail(self.github_user, res.status_code)
@@ -94,8 +94,8 @@ class RepositoryService:
                 if is_contributor:
                     break
 
+        # contributor 이거나 owner 인 경우
         if is_contributor or repository.owner.lower() == self.github_user.username.lower():
-            # contributor 이거나 owner 인 경우
             new_repository = Repository(
                 github_user=self.github_user,
                 name=repository.name,
@@ -128,15 +128,15 @@ class RepositoryService:
 
         if languages_data:
             for _type, count in languages_data.items():
-                if not self.update_language_dict.get(_type):
-                    self.update_language_dict[_type] = count
+                if not self.update_languages.get(_type):
+                    self.update_languages[_type] = count
                 else:
-                    self.update_language_dict[_type] += count
+                    self.update_languages[_type] += count
 
             return json.dumps(list(languages_data.keys()))
 
         return ''
-
+    
     def update_or_create_language(self):
         """
         새로 추가된 언어를 만들고 User 가 사용하는 언어사용 count(byte 수)를 업데이트 해주는 함수
@@ -145,9 +145,9 @@ class RepositoryService:
         # DB에 없던 Language 생성
         new_language_list = []
         exists_languages = set(Language.objects.filter(
-            type__in=self.update_language_dict.keys()).values_list('type', flat=True)
-        )
-        new_languages = set(self.update_language_dict.keys()) - exists_languages
+            type__in=self.update_languages.keys()
+        ).values_list('type', flat=True))
+        new_languages = set(self.update_languages.keys()) - exists_languages
 
         for language in new_languages:
             new_language_list.append(Language(type=language))
@@ -158,25 +158,26 @@ class RepositoryService:
         # 가존에 있던 UserLanguage 업데이트
         new_user_languages = []
         user_language_qs = UserLanguage.objects.prefetch_related('language').filter(
-            github_user_id=self.github_user.id, language__type__in=self.update_language_dict.keys()
+            github_user_id=self.github_user.id, 
+            language__type__in=self.update_languages.keys()
         )
 
         for user_language in user_language_qs:
-            if user_language.language.type in self.update_language_dict.keys():
-                count = self.update_language_dict.pop(user_language.language.type)
+            if user_language.language.type in self.update_languages.keys():
+                count = self.update_languages.pop(user_language.language.type)
 
                 if user_language.number != count:
                     user_language.number = count
                     user_language.save(update_fields=['number'])
 
         # 새로운 UserLanguage 생성
-        languages = Language.objects.filter(type__in=self.update_language_dict.keys())
+        languages = Language.objects.filter(type__in=self.update_languages.keys())
         for language in languages:
             new_user_languages.append(
                 UserLanguage(
                     github_user_id=self.github_user.id,
                     language_id=language.id,
-                    number=self.update_language_dict.pop(language.type)
+                    number=self.update_languages.pop(language.type)
                 )
             )
 

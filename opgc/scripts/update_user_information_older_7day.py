@@ -1,7 +1,3 @@
-"""
-    업데이트 한지 7일이 지난 유저들 업데이트 배치 스크립트
-    : 일단 유저 적을때는 매일 새벽에 돌리도록(3,4,5)
-"""
 import concurrent.futures
 import timeit
 from dataclasses import asdict
@@ -34,6 +30,10 @@ def update_github_basic_information(github_user: GithubUser):
 
 
 def run():
+    """
+    업데이트 한지 7일이 지난 유저들 업데이트 배치 스크립트
+    : 일단 유저 적을때는 매일 새벽에 돌리도록(3,4,5)
+    """
     # 1. 스크립트를 시작하기전 rate_limit 를 체크한다.
     try:
         rate_limit_check_service = GithubInformationService(None)

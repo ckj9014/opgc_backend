@@ -1,5 +1,6 @@
 import json
 from dataclasses import asdict
+from typing import Optional
 
 import requests
 from django.conf import settings
@@ -15,6 +16,7 @@ from core.repository_service import RepositoryService
 from utils.github import get_continuous_commit_day
 from utils.slack import slack_notify_new_user
 
+
 FURL = furl('https://api.github.com/')
 GITHUB_RATE_LIMIT_URL = 'https://api.github.com/rate_limit'
 PER_PAGE = 50
@@ -28,13 +30,11 @@ class GithubInformationService:
     """
     Authorization - access token 이 있는경우 1시간에 5000번 api 호출 가능 없으면 60번
     """
-
     github_user = None
 
-    def __init__(self, username, is_30_min_script=False):
+    def __init__(self, username: Optional[str] = None, is_30_min_script: bool = False):
         self.username = username
         self.new_repository_list = []  # 새로 생성될 레포지토리 리스트
-        self.update_language_dict = {}  # 업데이트할 language
         self.is_30_min_script = is_30_min_script
 
     @staticmethod
@@ -83,12 +83,16 @@ class GithubInformationService:
                 followers=user_information.followers,
                 following=user_information.following
             )
+            # todo: 비동기 (rabbitMQ)
             slack_notify_new_user(github_user)
 
         return github_user
 
     def check_rete_limit(self) -> int:
-        # 현재 호출할 수 있는 rate 체크 (token 있는경우 1시간당 5000번 없으면 60번 호출)
+        """
+        현재 호출할 수 있는 Github API rate 체크
+        token 있는경우 1시간당 5000번, 없으면 60번 호출
+        """
         res = requests.get(GITHUB_RATE_LIMIT_URL, headers=settings.GITHUB_API_HEADER)
 
         if res.status_code != 200:
@@ -116,7 +120,7 @@ class GithubInformationService:
 
     def update_success(self, total_contribution: int, total_stargazers_count: int) -> GithubUser:
         """
-            업데이트 성공 처리
+        업데이트 성공 처리
         """
         self.github_user.status = GithubUser.COMPLETED
         self.github_user.total_contribution = total_contribution
@@ -152,15 +156,15 @@ class GithubInformationService:
     @staticmethod
     def get_tier_statistics(user_rank: int) -> int:
         """
-            - 티어 통계
-            챌린저 2%
-            마스터 2~5%
-            다이아: 5~15%
-            플래티넘 15~25%
-            골드: 25~35%
-            실버: 35%~60%
-            브론즈: 60~95%
-            언랭: 95.%~
+        - 티어 통계
+        챌린저 2%
+        마스터 2~5%
+        다이아: 5~15%
+        플래티넘 15~25%
+        골드: 25~35%
+        실버: 35%~60%
+        브론즈: 60~95%
+        언랭: 95.%~
         """
 
         last_user_rank = GithubUser.objects.order_by('-user_rank').values_list('user_rank', flat=True)[0]

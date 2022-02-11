@@ -1,6 +1,3 @@
-"""
-    새벽 2시에 돌아가는 배치 스크립트
-"""
 import timeit
 
 from chunkator import chunkator
@@ -29,9 +26,8 @@ class RankService(object):
     @staticmethod
     def create_new_rank(_type: str):
         """
-        새로운 type의 rank를 1-10까지 만든다
+        새로운 type 의 rank 를 1~10까지 만든다
         """
-
         if UserRank.objects.filter(type=_type).exists():
             return
 
@@ -72,7 +68,6 @@ class RankService(object):
         """
         언어별 count 값으로 랭킹
         """
-
         languages = Language.objects.all()
 
         for language in chunkator(languages, 1000):
@@ -103,6 +98,9 @@ class RankService(object):
 
 
 def run():
+    """
+    새벽 2시에 돌아가는 배치 스크립트
+    """
     rank_service = RankService()
 
     # 먼저 새로 추가된 language 가 있으면 추가해준다

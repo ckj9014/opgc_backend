@@ -25,14 +25,14 @@ def retry_handle(username, year) -> Optional[Response]:
         break
 
     if retry_cnt >= 5:
-        capture_exception(Exception(f'Requests Retry Limit - {username}'))
+        capture_exception(Exception(f'Requests Retry Limit'))
 
     return res
 
 
 def get_continuous_commit_day(username: str) -> (bool, int):
     """
-        1일 1커밋을 얼마나 지속했는지 day count 하는 함수
+    1일 1커밋을 얼마나 지속했는지 day count 하는 함수
     """
     now = datetime.now() - timedelta(days=1)  # 업데이트 당일 전날부터 체크
     continuous_count = 0

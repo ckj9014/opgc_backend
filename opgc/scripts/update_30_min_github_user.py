@@ -1,8 +1,3 @@
-"""
-    30분마다 실행되는 Github user 업데이트
-    : github api가 rate_limit 걸려서 더이상 호출하지 못하는 경우
-
-"""
 import timeit
 
 from chunkator import chunkator
@@ -15,14 +10,20 @@ from utils.slack import slack_update_github_user, slack_notify_update_fail
 
 
 def run():
+    """
+    30분마다 실행되는 Github user 업데이트
+    : github api가 rate_limit 걸려서 더이상 호출하지 못하는 경우
+    """
     start_time = timeit.default_timer()  # 시작 시간 체크
 
-    update_user_queue_qs = UpdateUserQueue.objects.filter(status__in=[UpdateUserQueue.READY, UpdateUserQueue.FAIL])
+    update_user_queue_qs = UpdateUserQueue.objects.filter(
+        status__in=[UpdateUserQueue.READY, UpdateUserQueue.FAIL]
+    )
     if not update_user_queue_qs:
         return
 
-    # 1. 스크립트를 시작하기전 rate_limit 를 체크한다.
     try:
+        # 스크립트를 시작하기전 rate_limit 를 체크한다.
         rate_limit_check_service = GithubInformationService()
         rate_limit_check_service.check_rete_limit()
 
@@ -36,16 +37,17 @@ def run():
         try:
             github_information_service = GithubInformationService(user_queue.username, True)
             github_information_service.update()
-
             user_queue.status = UpdateUserQueue.SUCCESS
             user_queue.save(update_fields=['status'])
             update_user_count += 1
 
-        except RateLimit:  # rate limit면 다른 유저들도 업데이드 못함
+        except RateLimit:
+            # rate limit 면 다른 유저들도 업데이드 못함
             slack_notify_update_fail(
-                message=f'Rate Limit 로 인해 업데이트가 실패되었습니다. {update_user_count}명만 업데이트 되었습니다.😭'
+                message=f'Rate Limit 로 인해 업데이트가 실패되었습니다. '
+                        f'{update_user_count}명만 업데이트 되었습니다.😭'
             )
-            return
+            break
 
         except Exception as e:
             capture_exception(e)

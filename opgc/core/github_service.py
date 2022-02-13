@@ -20,7 +20,7 @@ from utils.slack import slack_notify_new_user
 FURL = furl('https://api.github.com/')
 GITHUB_RATE_LIMIT_URL = 'https://api.github.com/rate_limit'
 PER_PAGE = 50
-CHECK_RATE_REMAIN = 0
+CHECK_RATE_REMAIN = 10
 USER_UPDATE_FIELDS = [
     'avatar_url', 'company', 'bio', 'blog', 'public_repos', 'followers', 'following', 'name', 'email', 'location'
 ]

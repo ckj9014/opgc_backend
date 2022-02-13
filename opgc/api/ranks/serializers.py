@@ -25,5 +25,5 @@ class TierSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = GithubUser
-        fields = ('id', 'username', 'name', 'avatar_url', 'tier', 'user_rank', 'company', 'bio',
+        fields = ('id', 'username', 'name', 'avatar_url', 'tier', 'user_rank', 'previous_user_rank', 'company', 'bio',
                   'continuous_commit_day', 'total_score', 'following', 'followers', 'total_contribution',)

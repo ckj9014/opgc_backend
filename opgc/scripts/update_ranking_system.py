@@ -73,9 +73,10 @@ class RankService(object):
         github_users = GithubUser.objects.all()
         for github_user in chunkator(github_users, 1000):
             try:
+                github_user.previous_user_rank = github_user.user_rank
                 github_user.user_rank = GithubInformationService.update_user_ranking(github_user.total_score)
                 github_user.tier = GithubInformationService.get_tier_statistics(github_user.user_rank)
-                github_user.save(update_fields=['user_rank', 'tier'])
+                github_user.save(update_fields=['user_rank', 'previous_user_rank', 'tier'])
 
             except GitHubUserDoesNotExist:
                 continue

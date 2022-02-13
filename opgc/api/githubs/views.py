@@ -68,8 +68,8 @@ class GithubUserViewSet(mixins.UpdateModelMixin,
         try:
             github_user = GithubUser.objects.filter(username=username).get()
 
-            # 업데이트 한지 하루가 지나야지 재업데이트
-            if github_user.updated + timedelta(1) >= datetime.now():
+            # 업데이트 한지 하루가 지나야지 재업데이트 가능
+            if self.can_update(updated_date=github_user.updated):
                 response_data = self.serializer_class(github_user).data
                 return Response(response_data)
 
@@ -84,6 +84,10 @@ class GithubUserViewSet(mixins.UpdateModelMixin,
             raise RateLimitGithubAPI()
 
         return Response(response_data)
+
+    @staticmethod
+    def can_update(updated_date: datetime):
+        return updated_date + timedelta(1) >= datetime.now()
 
 
 class OrganizationViewSet(mixins.ListModelMixin,
@@ -100,13 +104,11 @@ class OrganizationViewSet(mixins.ListModelMixin,
     def get_queryset(self):
         user_pk = self.kwargs.get(self.lookup_url_kwarg)
         organizations = Organization.objects.filter(org__github_user_id=user_pk)
-
         return organizations
 
     def list(self, request, *args, **kwargs):
         organizations = self.get_queryset()
         serializer = self.serializer_class(organizations, many=True)
-
         return Response(serializer.data)
 
 
@@ -124,7 +126,6 @@ class RepositoryViewSet(mixins.ListModelMixin,
     def get_queryset(self):
         user_pk = self.kwargs.get(self.lookup_url_kwarg)
         repositories = Repository.objects.filter(github_user_id=user_pk)
-
         return repositories
 
 

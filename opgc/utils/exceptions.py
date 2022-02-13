@@ -53,4 +53,3 @@ def insert_queue(username: str):
             username=username,
             status=UpdateUserQueue.READY
         )
-        slack_notify_update_user_queue(username)

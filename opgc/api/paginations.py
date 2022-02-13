@@ -55,10 +55,10 @@ class ScoreOrderingPagination(BaseCursorPagination):
 class UserRankOrderingPagination(BaseCursorPagination):
     page_size = 10
     max_page_size = 1000
-    ordering = ('user_rank')
+    ordering = ('user_rank',)
 
 
 class TotalScorePagination(BaseCursorPagination):
     page_size = 10
     max_page_size = 1000
-    ordering = ('-total_score')
+    ordering = ('-total_score',)

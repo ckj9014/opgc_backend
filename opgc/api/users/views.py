@@ -5,14 +5,15 @@ from api.users.serializers import UserSerializer
 from apps.users.models import User
 
 """
-현재는 사용하지 않는 api (곧 삭제)
+todo: 깃헙 로그인 형태로 변경 예정
+      현재는 사용하지 않음
 """
 
 
 class UserViewSet(viewsets.ViewSet, mixins.ListModelMixin):
     """
-        endpoint : users/
-        : 여기서 User는 따로 Oauth 인증같은건 하지 않는다. 단순히 username만 저장함
+    endpoint : users/
+    : 여기서 User 는 따로 Oauth 인증같은건 하지 않는다. 단순히 username 만 저장함
     """
 
     queryset = User.objects.all()

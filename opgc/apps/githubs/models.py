@@ -25,24 +25,27 @@ class GithubUser(CustomBaseModel):
         (FAIL, 'fail')
     )
 
-    username = models.CharField(unique=True, max_length=200, null=False)  # Github ID
-    name = models.CharField(max_length=200, default=None, null=True, blank=True)  # name
-    email = models.CharField(max_length=200, default=None, null=True, blank=True)
-    location = models.CharField(max_length=200, default=None, null=True, blank=True)  # country
-    avatar_url = models.CharField(max_length=500, default=None, null=True, blank=True)  # Github Profile Image URL
-    total_contribution = models.IntegerField(verbose_name='contribution', default=0)
-    total_stargazers_count = models.IntegerField(default=0)
-    tier = models.SmallIntegerField(choices=GITHUB_RANK_CHOICES, default=UNRANK, blank=False)
-    user_rank = models.IntegerField(default=None, null=True)  # 랭킹
-    company = models.CharField(max_length=100, default=None, null=True, blank=True)
-    bio = models.CharField(max_length=200, default=None, null=True, blank=True)  # 설명
-    blog = models.CharField(max_length=100, default=None, null=True, blank=True)
-    public_repos = models.IntegerField(default=0, blank=True)
-    followers = models.IntegerField(default=0, blank=True)
-    following = models.IntegerField(default=0, blank=True)
-    status = models.SmallIntegerField(choices=UPDATING_STATUS, default=NONE, blank=False)
-    continuous_commit_day = models.IntegerField(default=0)  # 1일 1커밋 지속 날짜 카운트
-    total_score = models.IntegerField(default=0, blank=True)  # 종합 스코어
+    status = models.SmallIntegerField(choices=UPDATING_STATUS, default=NONE, blank=False, verbose_name='업데이트 상태')
+    username = models.CharField(unique=True, max_length=200, null=False, verbose_name='Github ID')
+    name = models.CharField(max_length=200, default=None, null=True, blank=True, verbose_name='유저이름')
+    email = models.CharField(max_length=200, default=None, null=True, blank=True, verbose_name='이메일')
+    location = models.CharField(max_length=200, default=None, null=True, blank=True,
+                                verbose_name='국가정보(country)')
+    avatar_url = models.CharField(max_length=500, default=None, null=True, blank=True,
+                                  verbose_name='깃헙 프로필 URL')
+    total_contribution = models.IntegerField(verbose_name='총 컨트리뷰션', default=0)
+    total_stargazers_count = models.IntegerField(default=0, verbose_name='총 스타(star)수')
+    tier = models.SmallIntegerField(choices=GITHUB_RANK_CHOICES, default=UNRANK, blank=False, verbose_name='티어')
+    user_rank = models.IntegerField(default=None, null=True, verbose_name='현재 랭킹')
+    previous_user_rank = models.IntegerField(default=None, null=True, verbose_name='이전 랭킹')
+    company = models.CharField(max_length=100, default=None, null=True, blank=True, verbose_name='회사')
+    bio = models.CharField(max_length=200, default=None, null=True, blank=True, verbose_name='설명')
+    blog = models.CharField(max_length=100, default=None, null=True, blank=True, verbose_name='블로그 주소')
+    public_repos = models.IntegerField(default=0, blank=True, verbose_name='공식 레포수')
+    followers = models.IntegerField(default=0, blank=True, verbose_name='팔로워')
+    following = models.IntegerField(default=0, blank=True, verbose_name='팔로잉')
+    continuous_commit_day = models.IntegerField(default=0, verbose_name='1일 1커밋 지속 날짜 카운트')
+    total_score = models.IntegerField(default=0, blank=True, verbose_name='종합점수')
 
 
 class Language(CustomBaseModel):
@@ -56,7 +59,7 @@ class Language(CustomBaseModel):
 class UserLanguage(CustomBaseModel):
     github_user = models.ForeignKey(GithubUser, db_constraint=False, on_delete=models.CASCADE)
     language = models.ForeignKey(Language, db_constraint=False, on_delete=models.CASCADE)
-    number = models.IntegerField(default=0)  # number of bytes of code written in that language.
+    number = models.IntegerField(default=0, help_text='number of bytes of code written in that language.')
 
     class Meta:
         db_table = 'githubs_user_language'
@@ -87,8 +90,9 @@ class Repository(CustomBaseModel):
     full_name = models.CharField(max_length=100, blank=False)
     owner = models.CharField(max_length=100, blank=False)
     organization = models.CharField(max_length=100, blank=False)
-    rep_language = models.CharField(max_length=100, blank=False, default='')  # 대표언어
-    languages = models.CharField(max_length=1000, blank=False, default='')  # 레포지토리에서 사용하는 모든 언어(json)
+    rep_language = models.CharField(max_length=100, blank=False, default='', help_text='대표언어')
+    languages = models.CharField(max_length=1000, blank=False, default='',
+                                 help_text='레포지토리에서 사용하는 모든 언어(json)')
 
 
 class Achievements(CustomBaseModel):

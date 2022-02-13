@@ -117,7 +117,8 @@ class OrganizationService:
 
         if user_organizations:
             UserOrganization.objects.filter(
-                github_user_id=self.github_user.id, organization__name__in=user_organizations
+                github_user_id=self.github_user.id,
+                organization__name__in=user_organizations
             ).delete()
 
     def get_organization_repository(self):

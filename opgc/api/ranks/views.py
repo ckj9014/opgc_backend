@@ -43,3 +43,11 @@ class OverallRankViewSet(mixins.ListModelMixin,
     queryset = GithubUser.objects.all()
     serializer_class = TierSerializer
     pagination_class = TotalScorePagination
+
+    def list(self, request, *args, **kwargs):
+        queryset = self.filter_queryset(self.get_queryset())
+        page = self.paginate_queryset(queryset)
+        serializer = self.get_serializer(page, many=True)
+        response = self.get_paginated_response(serializer.data)
+        response.data['total_users'] = self.queryset.count()
+        return response

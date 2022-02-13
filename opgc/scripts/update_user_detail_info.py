@@ -38,7 +38,11 @@ def run():
     with concurrent.futures.ThreadPoolExecutor() as executor:
         for github_user in chunkator(github_user_qs, 1000):
             try:
-                github_information_service = GithubInformationService(github_user.username)
+                # 배치에서는 queue 에 넣지 않는다 (그냥 새벽에 실행하도록)
+                github_information_service = GithubInformationService(
+                    username=github_user.username,
+                    is_insert_queue=False
+                )
                 executor.submit(github_information_service.update)
                 update_user_count += 1
 

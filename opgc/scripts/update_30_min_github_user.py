@@ -35,7 +35,7 @@ def run():
 
     for user_queue in chunkator(update_user_queue_qs, 1000):
         try:
-            github_information_service = GithubInformationService(user_queue.username, True)
+            github_information_service = GithubInformationService(user_queue.username, False)
             github_information_service.update()
             user_queue.status = UpdateUserQueue.SUCCESS
             user_queue.save(update_fields=['status'])

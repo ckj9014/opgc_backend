@@ -134,11 +134,12 @@ class GithubInformationService:
         user_rank = self.update_user_ranking(total_score)
 
         self.github_user.total_score = total_score
+        self.github_user.previous_user_rank = self.github_user.user_rank
         self.github_user.user_rank = user_rank
         self.github_user.tier = self.get_tier_statistics(user_rank)
         self.github_user.save(update_fields=[
             'status', 'updated', 'total_contribution', 'total_stargazers_count',
-            'tier', 'continuous_commit_day', 'user_rank', 'total_score'
+            'tier', 'continuous_commit_day', 'previous_user_rank', 'user_rank', 'total_score'
         ])
 
         return self.github_user

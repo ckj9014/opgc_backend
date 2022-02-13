@@ -38,7 +38,7 @@ def run():
     """
     try:
         # 스크립트를 시작하기전 rate_limit 를 체크한다.
-        rate_limit_check_service = GithubInformationService(None)
+        rate_limit_check_service = GithubInformationService(is_insert_queue=False)
         rate_limit_check_service.check_rete_limit()
 
     except RateLimit:

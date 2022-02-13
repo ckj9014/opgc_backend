@@ -32,10 +32,10 @@ class GithubInformationService:
     """
     github_user = None
 
-    def __init__(self, username: Optional[str] = None, is_30_min_script: bool = False):
+    def __init__(self, username: Optional[str] = None, is_insert_queue: bool = True):
         self.username = username
         self.new_repository_list = []  # 새로 생성될 레포지토리 리스트
-        self.is_30_min_script = is_30_min_script
+        self.is_insert_queue = is_insert_queue
 
     @staticmethod
     def create_dto(user_information_data: dict) -> UserInformationDto:
@@ -98,7 +98,7 @@ class GithubInformationService:
         if res.status_code != 200:
             # 이 경우는 rate_limit api 가 호출이 안되는건데,
             # 이런경우가 깃헙장애 or rate_limit 호출에 제한이 있는지 모르겟다.
-            if not self.is_30_min_script:
+            if self.is_insert_queue:
                 insert_queue(self.username)
             capture_exception(Exception("Can't get RATE LIMIT."))
 
@@ -109,7 +109,7 @@ class GithubInformationService:
             remaining = content['rate']['remaining']
 
             if remaining <= CHECK_RATE_REMAIN:
-                if not self.is_30_min_script:
+                if self.is_insert_queue:
                     insert_queue(self.username)
                 raise RateLimit()
 

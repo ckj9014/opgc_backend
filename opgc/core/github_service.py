@@ -1,4 +1,3 @@
-import json
 from dataclasses import asdict
 from typing import Optional
 
@@ -38,19 +37,15 @@ class GithubInformationService:
         user_information: Optional[UserInformationDto] = self.github_adapter.get_user_info(self.username)
         if user_information is None and self.is_insert_queue:
             insert_queue(self.username)
+            raise RateLimit()
 
         # 1. GithubUser 가 있는지 체크, 없으면 생성
         self.github_user: GithubUser = self.get_or_create_github_user(user_information)
+
         # 2. User 의 repository 정보를 가져온다
         repo_service = RepositoryService(github_user=self.github_user)
-
-        try:
-            for repository in self.get_user_repository_urls(user_information):
-                repository_dto = repo_service.create_dto(repository)
-                repo_service.repositories.append(repository_dto)
-
-        except json.JSONDecodeError:
-            pass
+        for repository in self.get_user_repository_urls(user_information):
+            repo_service.repositories.append(repo_service.create_dto(repository))
 
         # 3. Organization 정보와 연관된 repository 업데이트
         org_service = OrganizationService(github_user=self.github_user)
@@ -112,7 +107,8 @@ class GithubInformationService:
 
         for i in range(0, (self.github_user.public_repos // self.github_api_per_page) + 1):
             params['page'] = i + 1
-            repositories.extend(self.github_adapter.get_repository_infos(user_information.repos_url, params))
+            repositories, status_code = self.github_adapter.get_repository_infos(user_information.repos_url, params)
+            repositories.extend(repositories)
 
         # todo: 레포지토리가 너무 많은경우 한번 프로세스에 async 로 처리하는데 서버 성능이 못따라감.
         #       일단 250개 미만으로 업데이트 하고, 이 부분에 대해서 고민해보기 (일단 리포팅만)

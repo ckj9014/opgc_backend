@@ -1,5 +1,4 @@
 import json
-from contextlib import contextmanager
 from enum import Enum
 from typing import Optional
 
@@ -11,7 +10,7 @@ from requests import Response
 from sentry_sdk import capture_exception
 
 from core.github_dto import UserInformationDto
-from utils.exceptions import GitHubUserDoesNotExist, RateLimit, json_handler_manager
+from utils.exceptions import GitHubUserDoesNotExist, json_handler_manager
 
 
 class RequestMethod(Enum):

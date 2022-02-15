@@ -7,8 +7,7 @@ from chunkator import chunkator
 
 from apps.githubs.models import GithubUser
 from utils.exceptions import RateLimit, GitHubUserDoesNotExist
-from core.github_service import GithubInformationService, USER_UPDATE_FIELDS
-from utils.github import get_continuous_commit_day
+from core.services.github_service import GithubInformationService, USER_UPDATE_FIELDS
 from utils.slack import slack_notify_update_fail, slack_update_basic_info
 
 

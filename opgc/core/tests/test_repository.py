@@ -1,6 +1,6 @@
 import pytest
 
-from core.repository_service import RepositoryService, RepositoryDto
+from core.services.repository_service import RepositoryService, RepositoryDto
 
 
 @pytest.mark.django_db

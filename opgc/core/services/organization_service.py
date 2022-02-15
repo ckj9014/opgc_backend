@@ -9,7 +9,7 @@ from adapter.githubs import GithubAdapter
 from apps.githubs.models import GithubUser, UserOrganization, Organization
 from core.github_dto import OrganizationDto, RepositoryDto
 from utils.exceptions import manage_api_call_fail
-from core.repository_service import RepositoryService
+from core.services.repository_service import RepositoryService
 
 
 class OrganizationService:

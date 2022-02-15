@@ -2,7 +2,7 @@ from dataclasses import asdict
 from unittest import mock
 
 import pytest
-from core.github_service import GithubInformationService, UserInformationDto
+from core.services.github_service import GithubInformationService, UserInformationDto
 
 
 @pytest.fixture(scope='function')

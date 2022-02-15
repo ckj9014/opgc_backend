@@ -3,7 +3,7 @@ import timeit
 from chunkator import chunkator
 
 from apps.githubs.models import GithubUser
-from core.github_service import GithubInformationService
+from core.services.github_service import GithubInformationService
 
 
 def run():

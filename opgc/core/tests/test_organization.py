@@ -1,6 +1,6 @@
 import pytest
 
-from core.organization_service import OrganizationService, OrganizationDto
+from core.services.organization_service import OrganizationService, OrganizationDto
 
 
 @pytest.mark.django_db

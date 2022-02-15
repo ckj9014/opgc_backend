@@ -6,7 +6,7 @@ from sentry_sdk import capture_exception
 
 from apps.githubs.models import GithubUser, Language, UserLanguage
 from apps.ranks.models import UserRank
-from core.github_service import GithubInformationService
+from core.services.github_service import GithubInformationService
 from utils.exceptions import GitHubUserDoesNotExist
 from utils.slack import slack_update_ranking_system
 

@@ -4,7 +4,7 @@ import timeit
 from chunkator import chunkator
 
 from apps.githubs.models import GithubUser
-from core.github_service import GithubInformationService
+from core.services.github_service import GithubInformationService
 from utils.github import get_continuous_commit_day, is_exists_github_users
 from utils.slack import slack_update_1day_1commit
 

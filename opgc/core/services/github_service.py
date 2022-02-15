@@ -8,8 +8,8 @@ from adapter.githubs import GithubAdapter
 from apps.githubs.models import GithubUser
 from core.github_dto import UserInformationDto
 from utils.exceptions import RateLimit, insert_queue
-from core.organization_service import OrganizationService
-from core.repository_service import RepositoryService
+from core.services.organization_service import OrganizationService
+from core.services.repository_service import RepositoryService
 from utils.github import get_continuous_commit_day
 from utils.slack import slack_notify_new_user
 

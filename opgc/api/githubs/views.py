@@ -15,7 +15,7 @@ from api.paginations import IdOrderingPagination, TierOrderingPagination, TotalS
 from api.ranks.serializers import TierSerializer
 from apps.githubs.models import GithubUser, Organization, Repository, Language
 from utils.exceptions import GitHubUserDoesNotExist, RateLimit
-from core.github_service import GithubInformationService
+from core.services.github_service import GithubInformationService
 
 
 class GithubUserViewSet(mixins.UpdateModelMixin,

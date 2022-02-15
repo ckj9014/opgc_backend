@@ -10,7 +10,7 @@ from apps.ranks.models import UserRank
 class RankViewSet(mixins.ListModelMixin,
                   viewsets.GenericViewSet):
     """
-        endpoint : ranks/
+    endpoint : ranks/
     """
 
     queryset = UserRank.objects.prefetch_related('github_user').all()
@@ -38,8 +38,9 @@ class RankViewSet(mixins.ListModelMixin,
 class OverallRankViewSet(mixins.ListModelMixin,
                          viewsets.GenericViewSet):
     """
-    - 종합순위 endpoint : ranks/overall/
+    endpoint : ranks/overall/
     """
+
     queryset = GithubUser.objects.all()
     serializer_class = TierSerializer
     pagination_class = TotalScorePagination

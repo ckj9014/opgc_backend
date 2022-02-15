@@ -2,7 +2,6 @@ from typing import Optional
 
 from apps.githubs.models import GithubUser
 from apps.reservations.models import UpdateUserQueue
-from utils.slack import slack_notify_update_user_queue
 
 
 PASSING_RESPONSE_STATUS = [204, 451]

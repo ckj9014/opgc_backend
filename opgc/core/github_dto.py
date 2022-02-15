@@ -65,3 +65,10 @@ class RepositoryDto:
         self.language = kwargs.get('language', '')
         self.contributors_url = kwargs.get('contributors_url')
         self.languages_url = kwargs.get('languages_url')
+
+
+@dataclass
+class ContributorDto:
+    languages: str
+    is_contributor: bool
+    contributions: int

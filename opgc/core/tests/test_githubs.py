@@ -2,7 +2,7 @@ from dataclasses import asdict
 from unittest import mock
 
 import pytest
-from core.github_service import GithubInformationService, UserInformationDto, USER_UPDATE_FIELDS
+from core.github_service import GithubInformationService, UserInformationDto
 
 
 @pytest.fixture(scope='function')
@@ -25,5 +25,5 @@ def test_get_or_create_github_user(github_context, mock_slack_notify_new_user):
 
     assert github_user is not None
     for key, value in asdict(user_information_dto).items():
-        if key in USER_UPDATE_FIELDS:
+        if key in github_information_service.user_update_fields:
             assert getattr(github_user, key, '') == value

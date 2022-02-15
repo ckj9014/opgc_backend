@@ -1,19 +1,18 @@
 import asyncio
 import json
-from typing import Optional
+from typing import Optional, List
 
 import aiohttp
 import requests
 from django.conf import settings
 
 from apps.githubs.models import GithubUser, Repository, Language, UserLanguage
-from core.github_dto import RepositoryDto
+from core.github_dto import RepositoryDto, ContributorDto
 from utils.exceptions import manage_api_call_fail, REASON_FORBIDDEN
-
-PER_PAGE = 50
 
 
 class RepositoryService:
+    github_api_per_page = 50
 
     def __init__(self, github_user: GithubUser):
         self.github_user = github_user
@@ -21,11 +20,7 @@ class RepositoryService:
         self.total_stargazers_count = 0
         self.repositories = []  # 업데이트할 레포지토리 리스트
         self.new_repository_list = []  # 새로 생성될 레포지토리 리스트
-        self.update_languages = {}  # 업데이트할 language
-
-    @staticmethod
-    def create_dto(repository_data: dict) -> RepositoryDto:
-        return RepositoryDto(**repository_data)
+        self.update_languages = {}  # 업데이트 할 language
 
     def update_repositories(self) -> bool:
         """
@@ -52,20 +47,58 @@ class RepositoryService:
 
         return True
 
+    def get_repositories(self, repos_url: str) -> List[RepositoryDto]:
+        repositories = []
+        res = requests.get(repos_url, headers=settings.GITHUB_API_HEADER)
+
+        if res.status_code != 200:
+            manage_api_call_fail(self.github_user, res.status_code)
+
+        try:
+            for repository_data in json.loads(res.content):
+                repository_dto = self.create_dto(repository_data)
+                repositories.append(repository_dto)
+
+        except json.JSONDecodeError:
+            pass
+
+        return repositories
+
     def create_repository(self, repository: RepositoryDto) -> (int, Optional[Repository]):
-        contribution = 0
-        languages = ''
-        is_contributor = False
         new_repository = None
 
-        if repository.fork is True:
+        if self.is_fork_repository(repository.fork):
             return 0, None
 
-        # User 가 Repository 의 contributor 인지 확인한다.
-        # contributions 와 language 확인을 위해 아래 로직을 타야함
-        # Too many Contributor 403 오류인 경우만 어쩔수 없이 contributions 확인 불가
-        params = {'per_page': PER_PAGE, 'page': 1}
-        for i in range(0, (self.github_user.public_repos // PER_PAGE) + 1):
+        contributor = self.check_contributor(repository)
+
+        # contributor 이거나 owner 인 경우
+        if contributor.is_contributor or repository.owner.lower() == self.github_user.username.lower():
+            new_repository = Repository(
+                github_user=self.github_user,
+                name=repository.name,
+                full_name=repository.full_name,
+                owner=repository.owner,
+                contribution=contributor.contributions,
+                stargazers_count=repository.stargazers_count,
+                rep_language=repository.language if repository.language else '',
+                languages=contributor.languages
+            )
+
+        self.total_stargazers_count += repository.stargazers_count
+
+        return contributor.contributions, new_repository
+
+    def check_contributor(self, repository: RepositoryDto) -> ContributorDto:
+        """
+        User 가 Repository 의 contributor 인지 확인한다.
+        contributions 와 language 확인을 위해 아래 로직을 타야함
+        Too many Contributor 403 오류인 경우만 어쩔수 없이 contributions 확인 불가
+        """
+        no_contributor = ContributorDto(languages='', is_contributor=False, contributions=0)
+        params = {'per_page': self.github_api_per_page, 'page': 1}
+
+        for i in range(0, (self.github_user.public_repos // self.github_api_per_page) + 1):
             params['page'] = i + 1
             res = requests.get(repository.contributors_url, headers=settings.GITHUB_API_HEADER, params=params)
 
@@ -73,75 +106,57 @@ class RepositoryService:
                 fail_type = manage_api_call_fail(self.github_user, res.status_code)
                 if fail_type == REASON_FORBIDDEN:
                     break
-            else:
-                try:
-                    contributors = json.loads(res.content)
-                except json.JSONDecodeError:
-                    return contribution, new_repository
+                continue
 
-                for contributor in contributors:
-                    # User 타입이고 contributor 가 본인인 경우 (깃헙에서 대소문자 구분을 하지않아서 lower 처리후 비교)
-                    if contributor.get('type') == 'User' and \
-                            contributor.get('login').lower() == self.github_user.username.lower():
-                        contribution = contributor.get('contributions', 0)
+            try:
+                contributors = json.loads(res.content)
+            except json.JSONDecodeError:
+                return no_contributor
 
-                        if contribution > 0:
-                            languages = self.record_language(repository.languages_url)
+            for contributor in contributors:
+                # User 타입이고 contributor 가 본인인 경우 (깃헙에서 대소문자 구분을 하지않아서 lower 처리후 비교)
+                if contributor.get('type') == 'User' and \
+                        contributor.get('login').lower() == self.github_user.username.lower():
 
-                        is_contributor = True
-                        break
+                    contributions = contributor.get('contributions', 0)
+                    return ContributorDto(
+                        languages=self.record_language(repository.languages_url) if contributions > 0 else '',
+                        is_contributor=True,
+                        contributions=contributions
+                    )
 
-                if is_contributor:
-                    break
-
-        # contributor 이거나 owner 인 경우
-        if is_contributor or repository.owner.lower() == self.github_user.username.lower():
-            new_repository = Repository(
-                github_user=self.github_user,
-                name=repository.name,
-                full_name=repository.full_name,
-                owner=repository.owner,
-                contribution=contribution,
-                stargazers_count=repository.stargazers_count,
-                rep_language=repository.language if repository.language else '',
-                languages=languages
-            )
-
-        self.total_stargazers_count += repository.stargazers_count
-
-        return contribution, new_repository
+        return no_contributor
 
     def record_language(self, languages_url: str) -> str:
         """
         repository 에서 사용중인 언어를 찾아서 dictionary 에 type 과 count 를 저장
         - count : 해당 언어로 작성된 코드의 바이트 수.
         """
-
-        res = requests.get(languages_url, headers=settings.GITHUB_API_HEADER)
-        if res.status_code != 200:
-            manage_api_call_fail(self.github_user, res.status_code)
-
         try:
+            res = requests.get(languages_url, headers=settings.GITHUB_API_HEADER)
+            if res.status_code != 200:
+                manage_api_call_fail(self.github_user, res.status_code)
+
             languages_data = json.loads(res.content)
+
+            if not languages_data:
+                return ''
+
         except json.JSONDecodeError:
             return ''
 
-        if languages_data:
-            for _type, count in languages_data.items():
-                if not self.update_languages.get(_type):
-                    self.update_languages[_type] = count
-                else:
-                    self.update_languages[_type] += count
+        for _type, count in languages_data.items():
+            if not self.update_languages.get(_type):
+                self.update_languages[_type] = count
+            else:
+                self.update_languages[_type] += count
 
-            return json.dumps(list(languages_data.keys()))
+        return json.dumps(list(languages_data.keys()))
 
-        return ''
-    
     def update_or_create_language(self):
         """
         새로 추가된 언어를 만들고 User 가 사용하는 언어사용 count(byte 수)를 업데이트 해주는 함수
         """
-
         # DB에 없던 Language 생성
         new_language_list = []
         exists_languages = set(Language.objects.filter(
@@ -158,7 +173,7 @@ class RepositoryService:
         # 가존에 있던 UserLanguage 업데이트
         new_user_languages = []
         user_language_qs = UserLanguage.objects.prefetch_related('language').filter(
-            github_user_id=self.github_user.id, 
+            github_user_id=self.github_user.id,
             language__type__in=self.update_languages.keys()
         )
 
@@ -184,7 +199,7 @@ class RepositoryService:
         if new_user_languages:
             UserLanguage.objects.bulk_create(new_user_languages)
 
-    async def update_repository(self, repository: RepositoryDto, user_repositories: list):  # 코루틴 정의
+    async def update_repository(self, repository: RepositoryDto, user_repositories: list):
         is_exist_repo = False
 
         for idx, user_repo in enumerate(user_repositories):
@@ -209,12 +224,10 @@ class RepositoryService:
                             # languages number update
                             self.record_language(repository.languages_url)
 
-                # repository update
                 if user_repo.contribution != contribution:
                     user_repo.contribution = contribution
                     update_fields.append('contribution')
 
-                # repository update
                 if user_repo.stargazers_count != repository.stargazers_count:
                     user_repo.stargazers_count = repository.stargazers_count
                     update_fields.append('stargazers_count')
@@ -241,3 +254,12 @@ class RepositoryService:
         ]
 
         await asyncio.gather(*futures)
+
+    @staticmethod
+    def create_dto(repository_data: dict) -> RepositoryDto:
+        return RepositoryDto(**repository_data)
+
+    @staticmethod
+    def is_fork_repository(fork: bool):
+        """포크한 레포지토리인지 체크"""
+        return fork is True

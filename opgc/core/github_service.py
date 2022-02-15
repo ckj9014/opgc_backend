@@ -17,35 +17,63 @@ from utils.github import get_continuous_commit_day
 from utils.slack import slack_notify_new_user
 
 
-FURL = furl('https://api.github.com/')
-GITHUB_RATE_LIMIT_URL = 'https://api.github.com/rate_limit'
-PER_PAGE = 50
-CHECK_RATE_REMAIN = 0
-USER_UPDATE_FIELDS = [
-    'avatar_url', 'company', 'bio', 'blog', 'public_repos', 'followers', 'following', 'name', 'email', 'location'
-]
-
-
 class GithubInformationService:
-    """
-    Authorization - access token 이 있는경우 1시간에 5000번 api 호출 가능 없으면 60번
-    """
     github_user = None
+    github_url = furl('https://api.github.com/')
+    github_rate_limit_url = 'https://api.github.com/rate_limit'
+    github_api_per_page = 50
+    check_rate_remain = 0
+    user_update_fields = [
+        'avatar_url', 'company', 'bio', 'blog', 'public_repos',
+        'followers', 'following', 'name', 'email', 'location'
+    ]
 
     def __init__(self, username: Optional[str] = None, is_insert_queue: bool = True):
         self.username = username
         self.new_repository_list = []  # 새로 생성될 레포지토리 리스트
         self.is_insert_queue = is_insert_queue
 
-    @staticmethod
-    def create_dto(user_information_data: dict) -> UserInformationDto:
-        return UserInformationDto(**user_information_data)
+    def update(self):
+        # 0. Github API 호출 가능한지 체크
+        self.check_rete_limit()
+
+        # 실제로 github 에 존재하는 user 인지 체크
+        user_information: UserInformationDto = self.check_github_user()
+        # 1. GithubUser 가 있는지 체크, 없으면 생성
+        self.github_user: GithubUser = self.get_or_create_github_user(user_information)
+        # 2. User 의 repository 정보를 가져온다
+        repo_service = RepositoryService(github_user=self.github_user)
+
+        try:
+            for repository in self.get_user_repository_urls(user_information):
+                repository_dto = repo_service.create_dto(repository)
+                repo_service.repositories.append(repository_dto)
+
+        except json.JSONDecodeError:
+            pass
+
+        # 3. Organization 정보와 연관된 repository 업데이트
+        org_service = OrganizationService(github_user=self.github_user)
+        org_service.update_or_create_organization(user_information.organizations_url)
+        org_service.get_organization_repository()
+
+        # 4. Repository 정보 업데이트
+        repo_service.repositories += org_service.repositories
+        repo_service.update_repositories()
+
+        # 5. Language and UserLanguage 업데이트
+        repo_service.update_or_create_language()
+
+        return self.update_success(
+            total_contribution=repo_service.total_contribution,
+            total_stargazers_count=repo_service.total_stargazers_count
+        )
 
     def check_github_user(self) -> UserInformationDto:
         """
         Github User 정보를 가져오거나 생성하는 함수
         """
-        user_api = FURL.set(path=f'/users/{self.username}').url
+        user_api = self.github_url.set(path=f'/users/{self.username}').url
         res = requests.get(user_api, headers=settings.GITHUB_API_HEADER)
 
         if res.status_code == 404:
@@ -62,7 +90,7 @@ class GithubInformationService:
             github_user.status = GithubUser.UPDATING
 
             for key, value in asdict(user_information).items():
-                if key in USER_UPDATE_FIELDS:
+                if key in self.user_update_fields:
                     if getattr(github_user, key, '') != value:
                         setattr(github_user, key, value)
                         update_fields.append(key)
@@ -88,12 +116,33 @@ class GithubInformationService:
 
         return github_user
 
+    def get_user_repository_urls(self, user_information: UserInformationDto) -> list:
+        """
+        유저가 가지고 있는 repository url 들을 반환
+        """
+        limit_repository_count = 250
+        params = {'per_page': self.github_api_per_page, 'page': 1}
+        repositories = []
+
+        for i in range(0, (self.github_user.public_repos // self.github_api_per_page) + 1):
+            params['page'] = i + 1
+            repo_res = requests.get(user_information.repos_url, headers=settings.GITHUB_API_HEADER, params=params)
+            repositories.extend(json.loads(repo_res.content))
+
+        # todo: 레포지토리가 너무 많은경우 한번 프로세스에 async 로 처리하는데 서버 성능이 못따라감.
+        #       일단 250개 미만으로 업데이트 하고, 이 부분에 대해서 고민해보기 (일단 리포팅만)
+        if len(repositories) > limit_repository_count:
+            capture_exception(Exception(f'[Over Repo] {self.github_user.username} - count : {len(repositories)}'))
+
+        return repositories[:limit_repository_count]
+
     def check_rete_limit(self) -> int:
         """
         현재 호출할 수 있는 Github API rate 체크
-        token 있는경우 1시간당 5000번, 없으면 60번 호출
+        참고: github api 의 경우 token 있는경우 시간당 5000번, 없으면 60번 호출 가능
+              https://docs.gitlab.com/ee/user/admin_area/settings/user_and_ip_rate_limits.html#response-headers
         """
-        res = requests.get(GITHUB_RATE_LIMIT_URL, headers=settings.GITHUB_API_HEADER)
+        res = requests.get(self.github_rate_limit_url, headers=settings.GITHUB_API_HEADER)
 
         if res.status_code != 200:
             # 이 경우는 rate_limit api 가 호출이 안되는건데,
@@ -101,14 +150,13 @@ class GithubInformationService:
             if self.is_insert_queue:
                 insert_queue(self.username)
             capture_exception(Exception("Can't get RATE LIMIT."))
+            return 0
 
-        # 참고: https://docs.gitlab.com/ee/user/admin_area/settings/user_and_ip_rate_limits.html#response-headers
-        # 왠만하면 100 이상 호출하는 경우가 있어서 100으로 지정
         try:
             content = json.loads(res.content)
             remaining = content['rate']['remaining']
 
-            if remaining <= CHECK_RATE_REMAIN:
+            if remaining <= self.check_rate_remain:
                 if self.is_insert_queue:
                     insert_queue(self.username)
                 raise RateLimit()
@@ -120,7 +168,7 @@ class GithubInformationService:
 
     def update_success(self, total_contribution: int, total_stargazers_count: int) -> GithubUser:
         """
-        업데이트 성공 처리
+        유저의 정보들을 최종적으로 업데이트 하는 함수
         """
         self.github_user.status = GithubUser.COMPLETED
         self.github_user.total_contribution = total_contribution
@@ -146,7 +194,10 @@ class GithubInformationService:
 
     @staticmethod
     def get_total_score(github_user: GithubUser) -> int:
-        # 기여도 - 15%, 1일1커밋(x10) - 75%, 팔로워 - 5%, 팔로잉 - 5%
+        """
+        종합 점수 계산 정첵
+        기여도 - 15%, 1일1커밋(x10) - 75%, 팔로워 - 5%, 팔로잉 - 5%
+        """
         return int(
             github_user.total_contribution * 0.15 +
             github_user.continuous_commit_day * 7.5 +
@@ -157,35 +208,34 @@ class GithubInformationService:
     @staticmethod
     def get_tier_statistics(user_rank: int) -> int:
         """
-        - 티어 통계
-        챌린저 2%
-        마스터 2~5%
-        다이아: 5~15%
-        플래티넘 15~25%
-        골드: 25~35%
-        실버: 35%~60%
-        브론즈: 60~95%
-        언랭: 95.%~
+        티어 통계 계산 정책
         """
-
         last_user_rank = GithubUser.objects.order_by('-user_rank').values_list('user_rank', flat=True)[0]
         if not user_rank:
             return GithubUser.UNRANK
 
+        # 챌린저 2%
         if user_rank == 1 or user_rank <= last_user_rank * 0.02:
             tier = GithubUser.CHALLENGER
+        # 마스터 2~5%
         elif last_user_rank * 0.02 < user_rank <= last_user_rank * 0.05:
             tier = GithubUser.MASTER
+        # 다이아: 5~15%
         elif last_user_rank * 0.05 < user_rank <= last_user_rank * 0.15:
             tier = GithubUser.DIAMOND
+        # 플래티넘 15~25%
         elif last_user_rank * 0.15 < user_rank <= last_user_rank * 0.25:
             tier = GithubUser.PLATINUM
+        # 골드: 25~35%
         elif last_user_rank * 0.25 < user_rank <= last_user_rank * 0.35:
             tier = GithubUser.GOLD
+        # 실버: 35%~60%
         elif last_user_rank * 0.35 < user_rank <= last_user_rank * 0.6:
             tier = GithubUser.SILVER
+        # 브론즈: 60~95%
         elif last_user_rank * 0.6 < user_rank <= last_user_rank * 0.95:
             tier = GithubUser.BRONZE
+        # 언랭: 95.%~
         else:
             tier = GithubUser.UNRANK
 
@@ -200,52 +250,6 @@ class GithubInformationService:
             total_score__gt=total_score
         ).values('total_score').annotate(Count('id')).count() + 1
 
-    def update(self):
-        # 0. Github API 호출 가능한지 체크
-        self.check_rete_limit()
-
-        # 실제로 github 에 존재하는 user 인지 체크
-        user_information: UserInformationDto = self.check_github_user()
-
-        # 1. GithubUser 가 있는지 체크, 없으면 생성
-        self.github_user: GithubUser = self.get_or_create_github_user(user_information)
-
-        # 2. User 의 repository 정보를 가져온다
-        params = {'per_page': PER_PAGE, 'page': 1}
-        repositories = []
-        for i in range(0, (self.github_user.public_repos // PER_PAGE) + 1):
-            params['page'] = i + 1
-            repo_res = requests.get(user_information.repos_url, headers=settings.GITHUB_API_HEADER, params=params)
-            repositories.extend(json.loads(repo_res.content))
-
-        repo_service = RepositoryService(github_user=self.github_user)
-
-        try:
-            # todo: 레포지토리가 너무 많은경우 한번 프로세스에 async 로 처리하는데 서버 성능이 못따라감.
-            #       일단 250개 미만으로 업데이트 하고, 이 부분에 대해서 고민해보기 (일단 리포팅만)
-            if len(repositories) > 250:
-                capture_exception(Exception(f'[Over Repo] {self.github_user.username} - count : {len(repositories)}'))
-
-            for repository in repositories[:250]:
-                repository_dto = repo_service.create_dto(repository)
-                repo_service.repositories.append(repository_dto)
-
-        except json.JSONDecodeError:
-            pass
-
-        # 3. Organization 정보와 연관된 repository 업데이트
-        org_service = OrganizationService(github_user=self.github_user)
-        org_service.update_organization(user_information.organizations_url)
-        org_service.get_organization_repository()
-
-        # 4. Repository 정보 업데이트
-        repo_service.repositories += org_service.repositories
-        repo_service.update_repositories()
-
-        # 5. Language and UserLanguage 업데이트
-        repo_service.update_or_create_language()
-
-        return self.update_success(
-            total_contribution=repo_service.total_contribution,
-            total_stargazers_count=repo_service.total_stargazers_count
-        )
+    @staticmethod
+    def create_dto(user_information_data: dict) -> UserInformationDto:
+        return UserInformationDto(**user_information_data)

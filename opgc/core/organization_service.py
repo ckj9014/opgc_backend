@@ -1,5 +1,6 @@
 import asyncio
 import json
+from typing import List
 
 import aiohttp
 import requests
@@ -15,57 +16,51 @@ class OrganizationService:
 
     def __init__(self, github_user: GithubUser):
         self.github_user = github_user
-        self.new_repositories = []  # 업데이트 해야할 레포지토리
+        self.new_repositories: List[RepositoryDto] = []  # 업데이트 해야할 레포지토리
         self.repositories = []  # 실제 유저의 레포지토리
 
-    @staticmethod
-    def create_dto(organization_data: dict) -> OrganizationDto:
-        return OrganizationDto(
-            name=organization_data.get('login'),
-            description=organization_data.get('description'),
-            logo=organization_data.get('avatar_url'),
-            repos_url=organization_data.get('repos_url')
-        )
-
-    def update_organization(self, organization_url: str):
-        """
-        organization(소속) 업데이트 함
-        """
-
+    def get_organizations(self, organization_url: str) -> List[OrganizationDto]:
+        organizations: List[OrganizationDto] = []
         res = requests.get(organization_url, headers=settings.GITHUB_API_HEADER)
+
         if res.status_code != 200:
             manage_api_call_fail(self.github_user, res.status_code)
 
-        update_user_organization_list = []
-        user_organizations = list(UserOrganization.objects.filter(
-            github_user_id=self.github_user.id).values_list('organization__name', flat=True)
-        )
-
         try:
-            organizations = []
             for organization_data in json.loads(res.content):
                 org_dto = self.create_dto(organization_data)
                 organizations.append(org_dto)
 
         except json.JSONDecodeError:
-            return
+            pass
 
-        for organization_dto in organizations:
+        return organizations
+
+    def update_or_create_organization(self, organization_url: str):
+        """
+        organization(소속)을 생성하거나 업데이트
+        """
+        update_user_organization_list = []
+        current_user_organizations = list(UserOrganization.objects.filter(
+            github_user_id=self.github_user.id
+        ).values_list('organization__name', flat=True))
+
+        for organization in self.get_organizations(organization_url):
             try:
                 update_fields = []
-                organization = Organization.objects.get(name=organization_dto.name)
+                organization = Organization.objects.get(name=organization.name)
 
-                for idx, org in enumerate(user_organizations):
+                for idx, org in enumerate(current_user_organizations):
                     if organization.name == org:
-                        user_organizations.pop(idx)
+                        current_user_organizations.pop(idx)
                         break
 
-                if organization.description != organization_dto.description:
-                    organization.description = organization_dto.description
+                if organization.description != organization.description:
+                    organization.description = organization.description
                     update_fields.append('description')
 
-                if organization.logo != organization_dto.logo:
-                    organization.logo = organization_dto.logo
+                if organization.logo != organization.logo:
+                    organization.logo = organization.logo
                     update_fields.append('logo')
 
                 if update_fields:
@@ -75,31 +70,21 @@ class OrganizationService:
 
             except Organization.DoesNotExist:
                 new_organization = Organization.objects.create(
-                    name=organization_dto.name,
-                    logo=organization_dto.logo,
-                    description=organization_dto.description or '',
+                    name=organization.name,
+                    logo=organization.logo,
+                    description=organization.description or '',
                 )
                 update_user_organization_list.append(new_organization.id)
 
             # organization 에 있는 repository 중 User 가 Contributor 인 repository 를 등록한다.
-            res = requests.get(organization_dto.repos_url, headers=settings.GITHUB_API_HEADER)
-            if res.status_code != 200:
-                manage_api_call_fail(self.github_user, res.status_code)
+            repository_service = RepositoryService(github_user=self.github_user)
+            self.new_repositories += repository_service.get_repositories(organization.repos_url)
 
-            try:
-                repositories = []
-                repository_service = RepositoryService(github_user=self.github_user)
+        self.update_organization_handler(current_user_organizations, update_user_organization_list)
 
-                for repository_data in json.loads(res.content):
-                    repository_dto = repository_service.create_dto(repository_data)
-                    repositories.append(repository_dto)
-
-            except json.JSONDecodeError:
-                continue
-
-            self.new_repositories += repositories
-
+    def update_organization_handler(self, current_user_organizations: list, update_user_organization_list: list):
         new_user_organization_list = []
+
         for organization_id in update_user_organization_list:
             if not UserOrganization.objects.filter(
                 github_user_id=self.github_user.id,
@@ -115,10 +100,10 @@ class OrganizationService:
         if new_user_organization_list:
             UserOrganization.objects.bulk_create(new_user_organization_list)
 
-        if user_organizations:
+        if current_user_organizations:
             UserOrganization.objects.filter(
                 github_user_id=self.github_user.id,
-                organization__name__in=user_organizations
+                organization__name__in=current_user_organizations
             ).delete()
 
     def get_organization_repository(self):
@@ -149,3 +134,13 @@ class OrganizationService:
         ]
 
         await asyncio.gather(*futures)
+
+    @staticmethod
+    def create_dto(organization_data: dict) -> OrganizationDto:
+        return OrganizationDto(
+            name=organization_data.get('login'),
+            description=organization_data.get('description'),
+            logo=organization_data.get('avatar_url'),
+            repos_url=organization_data.get('repos_url')
+        )
+

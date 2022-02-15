@@ -73,7 +73,6 @@ class GithubUserViewSet(mixins.UpdateModelMixin,
         try:
             github_user = GithubUser.objects.filter(username=username).get()
 
-            # 업데이트 한지 하루가 지나야지 재업데이트 가능
             if self.can_update(updated_date=github_user.updated):
                 response_data = self.serializer_class(github_user).data
                 return Response(response_data)
@@ -118,6 +117,7 @@ class GithubUserViewSet(mixins.UpdateModelMixin,
 
     @staticmethod
     def can_update(updated_date: datetime):
+        """업데이트 한지 하루가 지나야지 재업데이트 가능"""
         return updated_date + timedelta(1) >= datetime.now()
 
 

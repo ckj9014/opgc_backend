@@ -19,7 +19,7 @@ def run():
     try:
         # 1스크립트를 시작하기전 rate_limit 를 체크한다.
         rate_limit_check_service = GithubInformationService(is_insert_queue=False)
-        rate_limit_check_service.check_rete_limit()
+        rate_limit_check_service.get_rate_remaining()
 
     except RateLimit:
         return
@@ -60,6 +60,6 @@ def run():
     slack_update_older_week_user(
         status='완료',
         message=f'업데이트가 {terminate_time - start_time:.2f}초 걸렸습니다. '
-                f'🤖 API 호출 남은 횟수 : {rate_limit_check_service.check_rete_limit()}',
+                f'🤖 API 호출 남은 횟수 : {rate_limit_check_service.get_rate_remaining()}',
         update_user=update_user_count
     )

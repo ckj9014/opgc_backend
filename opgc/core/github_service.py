@@ -2,15 +2,13 @@ import json
 from dataclasses import asdict
 from typing import Optional
 
-import requests
-from django.conf import settings
 from django.db.models import Count
-from furl import furl
 from sentry_sdk import capture_exception
 
+from adapter.githubs import GithubAdapter
 from apps.githubs.models import GithubUser
 from core.github_dto import UserInformationDto
-from utils.exceptions import GitHubUserDoesNotExist, RateLimit, manage_api_call_fail, insert_queue
+from utils.exceptions import RateLimit, insert_queue
 from core.organization_service import OrganizationService
 from core.repository_service import RepositoryService
 from utils.github import get_continuous_commit_day
@@ -19,10 +17,9 @@ from utils.slack import slack_notify_new_user
 
 class GithubInformationService:
     github_user = None
-    github_url = furl('https://api.github.com/')
-    github_rate_limit_url = 'https://api.github.com/rate_limit'
+    github_adapter = GithubAdapter
     github_api_per_page = 50
-    check_rate_remain = 0
+
     user_update_fields = [
         'avatar_url', 'company', 'bio', 'blog', 'public_repos',
         'followers', 'following', 'name', 'email', 'location'
@@ -35,10 +32,13 @@ class GithubInformationService:
 
     def update(self):
         # 0. Github API 호출 가능한지 체크
-        self.check_rete_limit()
+        self.get_rate_remaining()
 
         # 실제로 github 에 존재하는 user 인지 체크
-        user_information: UserInformationDto = self.check_github_user()
+        user_information: Optional[UserInformationDto] = self.github_adapter.get_user_info(self.username)
+        if user_information is None and self.is_insert_queue:
+            insert_queue(self.username)
+
         # 1. GithubUser 가 있는지 체크, 없으면 생성
         self.github_user: GithubUser = self.get_or_create_github_user(user_information)
         # 2. User 의 repository 정보를 가져온다
@@ -68,20 +68,6 @@ class GithubInformationService:
             total_contribution=repo_service.total_contribution,
             total_stargazers_count=repo_service.total_stargazers_count
         )
-
-    def check_github_user(self) -> UserInformationDto:
-        """
-        Github User 정보를 가져오거나 생성하는 함수
-        """
-        user_api = self.github_url.set(path=f'/users/{self.username}').url
-        res = requests.get(user_api, headers=settings.GITHUB_API_HEADER)
-
-        if res.status_code == 404:
-            raise GitHubUserDoesNotExist()
-        elif res.status_code != 200:
-            manage_api_call_fail(self.github_user, res.status_code)
-
-        return self.create_dto(json.loads(res.content))
 
     def get_or_create_github_user(self, user_information: UserInformationDto) -> GithubUser:
         try:
@@ -126,8 +112,7 @@ class GithubInformationService:
 
         for i in range(0, (self.github_user.public_repos // self.github_api_per_page) + 1):
             params['page'] = i + 1
-            repo_res = requests.get(user_information.repos_url, headers=settings.GITHUB_API_HEADER, params=params)
-            repositories.extend(json.loads(repo_res.content))
+            repositories.extend(self.github_adapter.get_repository_info(user_information.repos_url, params))
 
         # todo: 레포지토리가 너무 많은경우 한번 프로세스에 async 로 처리하는데 서버 성능이 못따라감.
         #       일단 250개 미만으로 업데이트 하고, 이 부분에 대해서 고민해보기 (일단 리포팅만)
@@ -136,33 +121,13 @@ class GithubInformationService:
 
         return repositories[:limit_repository_count]
 
-    def check_rete_limit(self) -> int:
-        """
-        현재 호출할 수 있는 Github API rate 체크
-        참고: github api 의 경우 token 있는경우 시간당 5000번, 없으면 60번 호출 가능
-              https://docs.gitlab.com/ee/user/admin_area/settings/user_and_ip_rate_limits.html#response-headers
-        """
-        res = requests.get(self.github_rate_limit_url, headers=settings.GITHUB_API_HEADER)
+    def get_rate_remaining(self) -> int:
+        remaining = self.github_adapter.check_rate_limit()
 
-        if res.status_code != 200:
-            # 이 경우는 rate_limit api 가 호출이 안되는건데,
-            # 이런경우가 깃헙장애 or rate_limit 호출에 제한이 있는지 모르겟다.
+        if remaining <= 0:
             if self.is_insert_queue:
                 insert_queue(self.username)
-            capture_exception(Exception("Can't get RATE LIMIT."))
-            return 0
-
-        try:
-            content = json.loads(res.content)
-            remaining = content['rate']['remaining']
-
-            if remaining <= self.check_rate_remain:
-                if self.is_insert_queue:
-                    insert_queue(self.username)
-                raise RateLimit()
-
-        except json.JSONDecodeError:
-            return 0
+            raise RateLimit()
 
         return remaining
 

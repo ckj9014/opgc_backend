@@ -1,4 +1,5 @@
 import json
+from contextlib import contextmanager
 from enum import Enum
 from typing import Optional
 
@@ -10,7 +11,7 @@ from requests import Response
 from sentry_sdk import capture_exception
 
 from core.github_dto import UserInformationDto
-from utils.exceptions import GitHubUserDoesNotExist, RateLimit
+from utils.exceptions import GitHubUserDoesNotExist, RateLimit, json_handler_manager
 
 
 class RequestMethod(Enum):
@@ -75,9 +76,28 @@ class GithubAdapter:
         return UserInformationDto(**json.loads(res.content))
 
     @classmethod
-    def get_repository_info(cls, repos_url: str, params: dict) -> dict:
+    def get_repository_info(cls, repos_url: str, params: dict) -> (Optional[dict], int):
         """
-        레포지토리 정보를 가져옵니다.
+        repository 정보를 가져옵니다.
         """
         res = cls._handle_request(path=repos_url, method=RequestMethod.GET, params=params)
-        return json.loads(res.content)
+
+        with json_handler_manager():
+            content = json.loads(res.content)
+
+        return content, res.status_code
+
+    @classmethod
+    def get_organization_info(cls, organization_url: str) -> (Optional[dict], int):
+        """
+        organization 정보를 가져옵니다.
+        """
+        res = cls._handle_request(path=organization_url, method=RequestMethod.GET)
+
+        if res.status_code != 200:
+            return None, res.status_code
+
+        with json_handler_manager():
+            content = json.loads(res.content)
+
+        return content, res.status_code

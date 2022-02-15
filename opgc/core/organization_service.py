@@ -3,9 +3,9 @@ import json
 from typing import List
 
 import aiohttp
-import requests
 from django.conf import settings
 
+from adapter.githubs import GithubAdapter
 from apps.githubs.models import GithubUser, UserOrganization, Organization
 from core.github_dto import OrganizationDto, RepositoryDto
 from utils.exceptions import manage_api_call_fail
@@ -13,6 +13,7 @@ from core.repository_service import RepositoryService
 
 
 class OrganizationService:
+    github_adapter = GithubAdapter
 
     def __init__(self, github_user: GithubUser):
         self.github_user = github_user
@@ -21,18 +22,14 @@ class OrganizationService:
 
     def get_organizations(self, organization_url: str) -> List[OrganizationDto]:
         organizations: List[OrganizationDto] = []
-        res = requests.get(organization_url, headers=settings.GITHUB_API_HEADER)
+        content, status_code = self.github_adapter.get_organization_info(organization_url)
 
-        if res.status_code != 200:
-            manage_api_call_fail(self.github_user, res.status_code)
+        if content is None:
+            manage_api_call_fail(self.github_user, status_code)
+            return []
 
-        try:
-            for organization_data in json.loads(res.content):
-                org_dto = self.create_dto(organization_data)
-                organizations.append(org_dto)
-
-        except json.JSONDecodeError:
-            pass
+        for organization_data in content:
+            organizations.append(self.create_dto(organization_data))
 
         return organizations
 

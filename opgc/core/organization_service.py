@@ -45,22 +45,22 @@ class OrganizationService:
             github_user_id=self.github_user.id
         ).values_list('organization__name', flat=True))
 
-        for organization in self.get_organizations(organization_url):
+        for organization_dto in self.get_organizations(organization_url):
             try:
                 update_fields = []
-                organization = Organization.objects.get(name=organization.name)
+                organization = Organization.objects.get(name=organization_dto.name)
 
                 for idx, org in enumerate(current_user_organizations):
                     if organization.name == org:
                         current_user_organizations.pop(idx)
                         break
 
-                if organization.description != organization.description:
-                    organization.description = organization.description
+                if organization.description != organization_dto.description:
+                    organization.description = organization_dto.description
                     update_fields.append('description')
 
-                if organization.logo != organization.logo:
-                    organization.logo = organization.logo
+                if organization.logo != organization_dto.logo:
+                    organization.logo = organization_dto.logo
                     update_fields.append('logo')
 
                 if update_fields:
@@ -70,15 +70,15 @@ class OrganizationService:
 
             except Organization.DoesNotExist:
                 new_organization = Organization.objects.create(
-                    name=organization.name,
-                    logo=organization.logo,
-                    description=organization.description or '',
+                    name=organization_dto.name,
+                    logo=organization_dto.logo,
+                    description=organization_dto.description or '',
                 )
                 update_user_organization_list.append(new_organization.id)
 
             # organization 에 있는 repository 중 User 가 Contributor 인 repository 를 등록한다.
             repository_service = RepositoryService(github_user=self.github_user)
-            self.new_repositories += repository_service.get_repositories(organization.repos_url)
+            self.new_repositories += repository_service.get_repositories(organization_dto.repos_url)
 
         self.update_organization_handler(current_user_organizations, update_user_organization_list)
 

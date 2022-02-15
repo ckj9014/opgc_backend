@@ -51,6 +51,5 @@ jobs:
         job_name: '테스트 케이스 검증'
         mention: 'here'
         mention_if: 'failure'
-        commit: true
         channel: '#logs'
         url: ${{ secrets.SLACK_WEBHOOK }}

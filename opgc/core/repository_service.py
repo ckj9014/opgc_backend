@@ -3,15 +3,16 @@ import json
 from typing import Optional, List
 
 import aiohttp
-import requests
 from django.conf import settings
 
+from adapter.githubs import GithubAdapter
 from apps.githubs.models import GithubUser, Repository, Language, UserLanguage
 from core.github_dto import RepositoryDto, ContributorDto
 from utils.exceptions import manage_api_call_fail, REASON_FORBIDDEN
 
 
 class RepositoryService:
+    github_adapter = GithubAdapter
     github_api_per_page = 50
 
     def __init__(self, github_user: GithubUser):
@@ -23,9 +24,6 @@ class RepositoryService:
         self.update_languages = {}  # 업데이트 할 language
 
     def update_repositories(self) -> bool:
-        """
-        레포지토리 업데이트 함수
-        """
         # 유저의 현재 모든 repository 를 가져온다.
         user_repositories = list(Repository.objects.filter(github_user=self.github_user))
 
@@ -38,29 +36,25 @@ class RepositoryService:
             Repository.objects.bulk_create(self.new_repository_list)
 
         # 남아 있는 user_repository 는 삭제된 repository 라 DB 에서도 삭제 해준다.
-        repo_ids = []
-        for repo in user_repositories:
-            repo_ids.append(repo.id)
+        delete_repository_ids = []
+        for repository in user_repositories:
+            delete_repository_ids.append(repository.id)
 
-        if repo_ids:
-            Repository.objects.filter(id__in=repo_ids).delete()
+        if delete_repository_ids:
+            Repository.objects.filter(id__in=delete_repository_ids).delete()
 
         return True
 
     def get_repositories(self, repos_url: str) -> List[RepositoryDto]:
         repositories = []
-        res = requests.get(repos_url, headers=settings.GITHUB_API_HEADER)
+        repository_infos, status_code = self.github_adapter.get_repository_infos(repos_url)
 
-        if res.status_code != 200:
-            manage_api_call_fail(self.github_user, res.status_code)
+        if repository_infos is None:
+            manage_api_call_fail(self.github_user, status_code)
 
-        try:
-            for repository_data in json.loads(res.content):
-                repository_dto = self.create_dto(repository_data)
-                repositories.append(repository_dto)
-
-        except json.JSONDecodeError:
-            pass
+        for repository_info in repository_infos:
+            repository_dto = self.create_dto(repository_info)
+            repositories.append(repository_dto)
 
         return repositories
 
@@ -100,24 +94,21 @@ class RepositoryService:
 
         for i in range(0, (self.github_user.public_repos // self.github_api_per_page) + 1):
             params['page'] = i + 1
-            res = requests.get(repository.contributors_url, headers=settings.GITHUB_API_HEADER, params=params)
+            contributor_infos, status_code = self.github_adapter.get_contributor_infos(
+                contributors_url=repository.contributors_url,
+                params=params
+            )
 
-            if res.status_code != 200:
-                fail_type = manage_api_call_fail(self.github_user, res.status_code)
+            if contributor_infos is None:
+                fail_type = manage_api_call_fail(self.github_user, status_code)
                 if fail_type == REASON_FORBIDDEN:
                     break
                 continue
 
-            try:
-                contributors = json.loads(res.content)
-            except json.JSONDecodeError:
-                return no_contributor
-
-            for contributor in contributors:
+            for contributor in contributor_infos:
                 # User 타입이고 contributor 가 본인인 경우 (깃헙에서 대소문자 구분을 하지않아서 lower 처리후 비교)
                 if contributor.get('type') == 'User' and \
                         contributor.get('login').lower() == self.github_user.username.lower():
-
                     contributions = contributor.get('contributions', 0)
                     return ContributorDto(
                         languages=self.record_language(repository.languages_url) if contributions > 0 else '',
@@ -132,26 +123,21 @@ class RepositoryService:
         repository 에서 사용중인 언어를 찾아서 dictionary 에 type 과 count 를 저장
         - count : 해당 언어로 작성된 코드의 바이트 수.
         """
-        try:
-            res = requests.get(languages_url, headers=settings.GITHUB_API_HEADER)
-            if res.status_code != 200:
-                manage_api_call_fail(self.github_user, res.status_code)
+        languages, status_code = self.github_adapter.get_languages(languages_url)
 
-            languages_data = json.loads(res.content)
+        if languages is None:
+            manage_api_call_fail(self.github_user, status_code)
 
-            if not languages_data:
-                return ''
-
-        except json.JSONDecodeError:
+        if not languages:
             return ''
 
-        for _type, count in languages_data.items():
-            if not self.update_languages.get(_type):
-                self.update_languages[_type] = count
+        for language_type, count in languages.items():
+            if not self.update_languages.get(language_type):
+                self.update_languages[language_type] = count
             else:
-                self.update_languages[_type] += count
+                self.update_languages[language_type] += count
 
-        return json.dumps(list(languages_data.keys()))
+        return json.dumps(list(languages.keys()))
 
     def update_or_create_language(self):
         """
@@ -161,7 +147,9 @@ class RepositoryService:
         new_language_list = []
         exists_languages = set(Language.objects.filter(
             type__in=self.update_languages.keys()
-        ).values_list('type', flat=True))
+        ).values_list(
+            'type', flat=True
+        ))
         new_languages = set(self.update_languages.keys()) - exists_languages
 
         for language in new_languages:

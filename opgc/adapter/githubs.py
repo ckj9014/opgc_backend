@@ -24,12 +24,16 @@ class GithubAdapter:
     github_url = furl('https://api.github.com/')
 
     @classmethod
-    def _handle_request(cls, method: RequestMethod, path: str, params: Optional[dict] = None) -> Optional[Response]:
+    def _handle_request(
+        cls,
+        url: str,
+        method: RequestMethod,
+        params: Optional[dict] = None
+    ) -> Optional[Response]:
 
         try:
             _request = requests.post if method == RequestMethod.POST else requests.get
-            user_api = cls.github_url.set(path=path).url
-            res = _request(user_api, headers=cls.headers, params=params)
+            res = _request(url, headers=cls.headers, params=params)
 
         except Exception as e:
             capture_exception(e)
@@ -44,7 +48,7 @@ class GithubAdapter:
         참고: github api 의 경우 token 있는경우 시간당 5000번, 없으면 60번 호출 가능
               https://docs.gitlab.com/ee/user/admin_area/settings/user_and_ip_rate_limits.html#response-headers
         """
-        res = cls._handle_request(path=f'rate_limit', method=RequestMethod.GET)
+        res = cls._handle_request(url=cls.github_url.set(path=f'rate_limit').url, method=RequestMethod.GET)
 
         if res.status_code != 200:
             # 이 경우는 rate_limit api 가 호출이 안되는건데,
@@ -66,7 +70,7 @@ class GithubAdapter:
         """
         깃헙에 해당 유저가 존재하는지 체크
         """
-        res = cls._handle_request(path=f'/users/{username}', method=RequestMethod.GET)
+        res = cls._handle_request(url=cls.github_url.set(path=f'/users/{username}').url, method=RequestMethod.GET)
 
         if res.status_code == 404:
             raise GitHubUserDoesNotExist()
@@ -76,28 +80,61 @@ class GithubAdapter:
         return UserInformationDto(**json.loads(res.content))
 
     @classmethod
-    def get_repository_info(cls, repos_url: str, params: dict) -> (Optional[dict], int):
+    def get_repository_infos(cls, repos_url: str, params: Optional[dict] = None) -> (Optional[list], int):
         """
         repository 정보를 가져옵니다.
         """
-        res = cls._handle_request(path=repos_url, method=RequestMethod.GET, params=params)
-
-        with json_handler_manager():
-            content = json.loads(res.content)
-
-        return content, res.status_code
-
-    @classmethod
-    def get_organization_info(cls, organization_url: str) -> (Optional[dict], int):
-        """
-        organization 정보를 가져옵니다.
-        """
-        res = cls._handle_request(path=organization_url, method=RequestMethod.GET)
+        res = cls._handle_request(url=repos_url, method=RequestMethod.GET, params=params)
 
         if res.status_code != 200:
             return None, res.status_code
 
         with json_handler_manager():
-            content = json.loads(res.content)
+            repository_info = json.loads(res.content)
 
-        return content, res.status_code
+        return repository_info, res.status_code
+
+    @classmethod
+    def get_organization_infos(cls, organization_url: str) -> (Optional[list], int):
+        """
+        organization 정보를 가져옵니다.
+        """
+        res = cls._handle_request(url=organization_url, method=RequestMethod.GET)
+
+        if res.status_code != 200:
+            return None, res.status_code
+
+        with json_handler_manager():
+            organization_infos = json.loads(res.content)
+
+        return organization_infos, res.status_code
+
+    @classmethod
+    def get_contributor_infos(cls, contributors_url: str, params: dict) -> (Optional[list], int):
+        """
+        contributor 정보를 가져옵니다.
+        """
+        res = cls._handle_request(url=contributors_url, method=RequestMethod.GET, params=params)
+
+        if res.status_code != 200:
+            return None, res.status_code
+
+        with json_handler_manager():
+            contributor_infos = json.loads(res.content)
+
+        return contributor_infos, res.status_code
+
+    @classmethod
+    def get_languages(cls, languages_url: str, params: Optional[dict] = None) -> (Optional[dict], int):
+        """
+        language 정보를 가져옵니다.
+        """
+        res = cls._handle_request(url=languages_url, method=RequestMethod.GET, params=params)
+
+        if res.status_code != 200:
+            return None, res.status_code
+
+        with json_handler_manager():
+            languages = json.loads(res.content)
+
+        return languages, res.status_code

@@ -112,7 +112,7 @@ class GithubInformationService:
 
         for i in range(0, (self.github_user.public_repos // self.github_api_per_page) + 1):
             params['page'] = i + 1
-            repositories.extend(self.github_adapter.get_repository_info(user_information.repos_url, params))
+            repositories.extend(self.github_adapter.get_repository_infos(user_information.repos_url, params))
 
         # todo: 레포지토리가 너무 많은경우 한번 프로세스에 async 로 처리하는데 서버 성능이 못따라감.
         #       일단 250개 미만으로 업데이트 하고, 이 부분에 대해서 고민해보기 (일단 리포팅만)

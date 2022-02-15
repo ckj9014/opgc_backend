@@ -22,13 +22,13 @@ class OrganizationService:
 
     def get_organizations(self, organization_url: str) -> List[OrganizationDto]:
         organizations: List[OrganizationDto] = []
-        content, status_code = self.github_adapter.get_organization_info(organization_url)
+        organization_infos, status_code = self.github_adapter.get_organization_infos(organization_url)
 
-        if content is None:
+        if organization_infos is None:
             manage_api_call_fail(self.github_user, status_code)
             return []
 
-        for organization_data in content:
+        for organization_data in organization_infos:
             organizations.append(self.create_dto(organization_data))
 
         return organizations

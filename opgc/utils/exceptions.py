@@ -1,3 +1,5 @@
+import json
+from contextlib import contextmanager
 from typing import Optional
 
 from apps.githubs.models import GithubUser
@@ -52,3 +54,11 @@ def insert_queue(username: str):
             username=username,
             status=UpdateUserQueue.READY
         )
+
+
+@contextmanager
+def json_handler_manager():
+    try:
+        yield 1
+    except json.JSONDecodeError:
+        pass

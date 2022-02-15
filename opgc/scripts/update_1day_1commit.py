@@ -6,7 +6,7 @@ from chunkator import chunkator
 from apps.githubs.models import GithubUser
 from core.services.github_service import GithubInformationService
 from utils.github import get_continuous_commit_day, is_exists_github_users
-from utils.slack import slack_update_1day_1commit
+from utils.slack import SlackService
 
 
 async def update_continuous_commit_day(github_user: GithubUser):
@@ -44,12 +44,12 @@ def update_1day_1commit():
 
 def run():
     start_time = timeit.default_timer()  # 시작 시간 체크
-    slack_update_1day_1commit(status='시작🌱', message='')
+    SlackService.slack_update_1day_1commit(status='시작🌱', message='')
 
     update_1day_1commit()
 
     terminate_time = timeit.default_timer()  # 종료 시간 체크
-    slack_update_1day_1commit(
+    SlackService.slack_update_1day_1commit(
         status='완료🌿',
         message=f'1일 1커밋 카운트 업데이트가 {terminate_time - start_time:.2f}초 걸렸습니다.😎',
     )

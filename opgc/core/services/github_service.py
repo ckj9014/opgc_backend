@@ -11,7 +11,7 @@ from utils.exceptions import RateLimit, insert_queue
 from core.services.organization_service import OrganizationService
 from core.services.repository_service import RepositoryService
 from utils.github import get_continuous_commit_day
-from utils.slack import slack_notify_new_user
+from utils.slack import SlackService
 
 
 class GithubInformationService:
@@ -93,7 +93,7 @@ class GithubInformationService:
                 following=user_information.following
             )
             # todo: 비동기 (rabbitMQ)
-            slack_notify_new_user(github_user)
+            SlackService.slack_notify_new_user(github_user)
 
         return github_user
 

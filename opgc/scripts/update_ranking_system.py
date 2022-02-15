@@ -8,7 +8,7 @@ from apps.githubs.models import GithubUser, Language, UserLanguage
 from apps.ranks.models import UserRank
 from core.services.github_service import GithubInformationService
 from utils.exceptions import GitHubUserDoesNotExist
-from utils.slack import slack_update_ranking_system
+from utils.slack import SlackService
 
 
 RANK_TYPES = [
@@ -93,12 +93,12 @@ def run():
 
     # 랭킹 업데이트 시작
     start_time = timeit.default_timer()  # 시작 시간 체크
-    slack_update_ranking_system(status='시작', message='')
+    SlackService.slack_update_ranking_system(status='시작', message='')
 
     rank_service.run()
 
     terminate_time = timeit.default_timer()  # 종료 시간 체크
-    slack_update_ranking_system(
+    SlackService.slack_update_ranking_system(
         status='완료',
         message=f'랭킹 업데이트가 {terminate_time - start_time:.2f}초 걸렸습니다.🎉',
     )

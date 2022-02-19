@@ -1,8 +1,12 @@
 from datetime import timedelta, datetime
 
+from django.http import HttpResponse
+from django.template import loader
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import viewsets, mixins, exceptions
+from rest_framework.renderers import TemplateHTMLRenderer
 from rest_framework.response import Response
+from rest_framework.views import APIView
 
 from api.exceptions import NotExistsGithubUser, RateLimitGithubAPI
 from api.githubs.serializers import OrganizationSerializer, RepositorySerializer, LanguageSerializer, \
@@ -152,3 +156,14 @@ class TierRankViewSet(mixins.ListModelMixin,
     pagination_class = TierOrderingPagination
     filter_backends = [DjangoFilterBackend]
     filterset_fields = ['tier']
+
+
+def user_profile_tag(request):
+    """임시"""
+    username = request.GET.get('username')
+    template = loader.get_template('user_profile/profile.html')
+    github_user = GithubUser.objects.get(username=username)
+    context = {'github_user': github_user}
+    response = HttpResponse(content=template.render(context, request))
+    response['Content-Type'] = 'image/svg+xml'
+    return response

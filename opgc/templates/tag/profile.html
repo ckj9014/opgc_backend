@@ -27,6 +27,11 @@
           background: #1D1F20;
         }
 
+        .normal-border {
+            border: 1px solid;
+            border-radius: 10px;
+        }
+
         .gradient-border {
           --borderWidth: 3px;
           background: #1D1F20;
@@ -134,7 +139,7 @@
 
         </style>
 
-        <div class="profile-base gradient-border">
+        <div class="profile-base {% if border == 'gradient' %}gradient-border{% else %}normal-border{% endif %}">
             <div class="rank">
             </div>
             <div class="inform rank-text">

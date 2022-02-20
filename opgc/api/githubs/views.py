@@ -106,9 +106,11 @@ class GithubUserViewSet(mixins.UpdateModelMixin,
         #     content_type='image/svg+xml',
         #     template=loader.get_template('tag/profile.html')
         # )
-        template = loader.get_template('tag/profile.html')
+        # todo: 함수 정리하기
         github_user = self.get_object()
-        context = {'github_user': github_user}
+        border = request.GET.get('border', 'normal')
+        template = loader.get_template('tag/profile.html')
+        context = {'github_user': github_user, 'border': border}
         response = HttpResponse(content=template.render(context, request))
         response['Content-Type'] = 'image/svg+xml'
         response['Cache-Control'] = 'no-cache'

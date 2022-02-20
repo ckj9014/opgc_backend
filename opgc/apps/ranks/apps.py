@@ -2,4 +2,4 @@ from django.apps import AppConfig
 
 
 class RankConfig(AppConfig):
-    name = 'apps.rank'
+    name = 'apps.ranks'

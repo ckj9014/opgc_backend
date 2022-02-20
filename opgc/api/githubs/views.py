@@ -2,8 +2,11 @@ from datetime import timedelta, datetime
 
 from django.http import HttpResponse
 from django.template import loader
+from django.template.response import TemplateResponse
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import viewsets, mixins, exceptions
+from rest_framework.decorators import action
+from rest_framework.generics import get_object_or_404
 from rest_framework.renderers import TemplateHTMLRenderer
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -30,6 +33,7 @@ class GithubUserViewSet(mixins.UpdateModelMixin,
     serializer_class = GithubUserListSerializer
     pagination_class = TotalScorePagination
     lookup_url_kwarg = 'username'
+    lookup_field = 'username'
 
     def get_queryset(self):
         data = self.request.GET
@@ -88,6 +92,29 @@ class GithubUserViewSet(mixins.UpdateModelMixin,
             raise RateLimitGithubAPI()
 
         return Response(response_data)
+
+    @action(methods=['GET'], detail=True, url_path='tag', url_name='tag')
+    def tag(self, request, *args, **kwargs):
+        """
+        OPGC 프로필 svg tag 를 리턴합니다.
+        """
+        # todo: TemplateResponse header 를 django 3.2 부터 사용가능
+        #       django version up 이후 사용예정
+        # context = {'github_user': self.get_object()}
+        # headers = {'Cache-Control': ' max-age=43200'}
+        # return TemplateResponse(
+        #     # headers=headers,
+        #     request=request,
+        #     context=context,
+        #     content_type='image/svg+xml',
+        #     template=loader.get_template('tag/profile.html')
+        # )
+        template = loader.get_template('tag/profile.html')
+        context = {'github_user': self.get_object()}
+        response = HttpResponse(content=template.render(context, request))
+        response['Content-Type'] = 'image/svg+xml'
+        response['Cache-Control'] = 'no-cache'
+        return response
 
     @staticmethod
     def can_update(updated_date: datetime):
@@ -156,14 +183,3 @@ class TierRankViewSet(mixins.ListModelMixin,
     pagination_class = TierOrderingPagination
     filter_backends = [DjangoFilterBackend]
     filterset_fields = ['tier']
-
-
-def user_profile_tag(request):
-    """임시"""
-    username = request.GET.get('username')
-    template = loader.get_template('user_profile/profile.html')
-    github_user = GithubUser.objects.get(username=username)
-    context = {'github_user': github_user}
-    response = HttpResponse(content=template.render(context, request))
-    response['Content-Type'] = 'image/svg+xml'
-    return response

@@ -113,7 +113,7 @@ class GithubUserViewSet(mixins.UpdateModelMixin,
         context = {'github_user': github_user, 'border': border}
         response = HttpResponse(content=template.render(context, request))
         response['Content-Type'] = 'image/svg+xml'
-        response['Cache-Control'] = 'no-cache'
+        response['Cache-Control'] = 'public, max-age=3600'
         return response
 
     @staticmethod

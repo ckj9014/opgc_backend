@@ -1,0 +1,174 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg version="1.1"
+     id="Layer_1"
+     xmlns="http://www.w3.org/2000/svg"
+     xmlns:xlink="http://www.w3.org/1999/xlink"
+     x="0px"
+     y="0px"
+     width="400px"
+     height="150px"
+     enable-background="new 0 0 455 429"
+     xml:space="preserve"
+>
+<foreignObject width="400px" height="150px">
+    <div xmlns="http://www.w3.org/1999/xhtml">
+        <style>
+
+        html, body {
+          height: 100%;
+        }
+
+        body {
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          height: 100%;
+          background: #1D1F20;
+        }
+
+        .gradient-border {
+          --borderWidth: 3px;
+          background: #1D1F20;
+          position: relative;
+          border-radius: var(--borderWidth);
+        }
+
+        .gradient-border:after {
+            content: '';
+            position: absolute;
+            top: calc(-1 * var(--borderWidth));
+            left: calc(-1 * var(--borderWidth));
+            height: calc(100% + var(--borderWidth) * 2);
+            width: calc(100% + var(--borderWidth) * 2);
+            background: linear-gradient(60deg, #f79533, #f37055, #ef4e7b, #a166ab, #5073b8, #1098ad, #07b39b, #6fba82);
+            border-radius: calc(2 * var(--borderWidth));
+            z-index: -1;
+            animation: animatedgradient 3s ease alternate infinite;
+            background-size: 300% 300%;
+        }
+
+        @keyframes animatedgradient {
+            0% {
+                background-position: 0% 50%;
+            }
+            50% {
+                background-position: 100% 50%;
+            }
+            100% {
+                background-position: 0% 50%;
+            }
+        }
+
+        .stagger {
+            opacity: 0;
+            animation: fadeInAnimation 0.9s ease-in-out forwards;
+        }
+
+        .rank-text {
+            margin-left: 150px;
+            font: 700 15px 'Segoe UI', Ubuntu, Sans-Serif;
+            color: #333333;
+            animation: scaleInAnimation 0.6s ease-in-out forwards;
+        }
+
+        @keyframes rankAnimation {
+            from {
+                stroke-dashoffset: 251.32741228718345;
+            }
+            to {
+                stroke-dashoffset: 124.42307153748989;
+            }
+        }
+
+        /* Animations */
+        @keyframes scaleInAnimation {
+            from {
+              transform: translate(-5px, 5px) scale(0);
+            }
+            to {
+              transform: translate(-5px, 5px) scale(1);
+            }
+        }
+
+        @keyframes fadeInAnimation {
+            from {
+                opacity: 0;
+            }
+            to {
+                opacity: 1;
+            }
+        }
+
+        .profile-base {
+            background: white;
+            display: flex;
+            font-size: x-small;
+            border-radius: 10px;
+            height: 140px;
+            margin: 5px;
+        }
+
+        .profile-base ul {
+            list-style: none;
+            padding-left: 0;
+        }
+
+        .profile-base li {
+            margin-bottom: 3px;
+        }
+
+        .profile-name {
+            font: 900 15px 'Segoe UI', Ubuntu, Sans-Serif;
+        }
+
+        .profile-detail {
+            display: inline-block;
+            width: 140px;
+        }
+
+        .profile-detail .emoji {
+            display: inline-block;
+            margin-right: 10px;
+        }
+
+        </style>
+
+        <div class="profile-base gradient-border">
+            <div class="rank">
+            </div>
+            <div class="inform rank-text">
+                <ul>
+                    <li><div class="profile-name">OPGC Rank ({{ github_user.username }})</div></li>
+                    <li>
+                        <div class="profile-detail"><div class="emoji">🏆</div>Rank: </div>{{ github_user.user_rank }}
+                    </li>
+                    <li>
+                        <div class="profile-detail"><div class="emoji">🏅</div>Tier: </div>{{ github_user.get_tier_display }}
+                    </li>
+                    <li>
+                        <div class="profile-detail"><div class="emoji">🌱</div>1Day, 1Commit: </div>{{ github_user.continuous_commit_day }}
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</foreignObject>
+    {% if github_user.get_tier_display == 'challneger' %}
+        {% include 'tag/../tier/challneger.html' %}
+    {% elif github_user.get_tier_display == 'Master' %}
+        {% include 'tag/../tier/master.html' %}
+    {% elif github_user.get_tier_display == 'Diamond' %}
+        {% include 'tag/../tier/diamond.html' %}
+    {% elif github_user.get_tier_display == 'Platinum' %}
+        {% include 'tag/../tier/platinum.html' %}
+    {% elif github_user.get_tier_display == 'Gold' %}
+        {% include 'tag/../tier/gold.html' %}
+    {% elif github_user.get_tier_display == 'Silver' %}
+        {% include 'tag/../tier/silver.html' %}
+    {% elif github_user.get_tier_display == 'Bronze' %}
+        {% include 'tag/../tier/bronze.html' %}
+    {% else %}
+        {% include 'tag/../tier/iron.html' %}
+    {% endif %}
+</svg>

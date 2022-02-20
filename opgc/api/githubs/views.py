@@ -6,10 +6,7 @@ from django.template.response import TemplateResponse
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import viewsets, mixins, exceptions
 from rest_framework.decorators import action
-from rest_framework.generics import get_object_or_404
-from rest_framework.renderers import TemplateHTMLRenderer
 from rest_framework.response import Response
-from rest_framework.views import APIView
 
 from api.exceptions import NotExistsGithubUser, RateLimitGithubAPI
 from api.githubs.serializers import OrganizationSerializer, RepositorySerializer, LanguageSerializer, \
@@ -110,7 +107,8 @@ class GithubUserViewSet(mixins.UpdateModelMixin,
         #     template=loader.get_template('tag/profile.html')
         # )
         template = loader.get_template('tag/profile.html')
-        context = {'github_user': self.get_object()}
+        github_user = self.get_object()
+        context = {'github_user': github_user}
         response = HttpResponse(content=template.render(context, request))
         response['Content-Type'] = 'image/svg+xml'
         response['Cache-Control'] = 'no-cache'

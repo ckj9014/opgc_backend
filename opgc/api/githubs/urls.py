@@ -7,7 +7,7 @@ from api.githubs.views import GithubUserViewSet, OrganizationViewSet, Repository
 app_name = 'githubs'
 
 router = DefaultRouter()
-router.register(r'', GithubUserViewSet, basename='notice')
+router.register(r'', GithubUserViewSet, basename='githubs')
 
 organization_list = OrganizationViewSet.as_view({
     'get': 'list',

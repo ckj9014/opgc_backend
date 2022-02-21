@@ -2,9 +2,6 @@ import asyncio
 import json
 from typing import Optional, List
 
-import aiohttp
-from django.conf import settings
-
 from adapter.githubs import GithubAdapter
 from apps.githubs.models import GithubUser, Repository, Language, UserLanguage
 from core.github_dto import RepositoryDto, ContributorDto
@@ -30,7 +27,7 @@ class RepositoryService:
         # loop = asyncio.get_event_loop()
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
-        loop.run_until_complete(self.update_repository_futures(self.repositories, user_repositories))
+        loop.run_until_complete(self.get_update_repository_futures(self.repositories, user_repositories))
 
         if self.new_repository_list:
             Repository.objects.bulk_create(self.new_repository_list)
@@ -107,8 +104,7 @@ class RepositoryService:
 
             for contributor in contributor_infos:
                 # User 타입이고 contributor 가 본인인 경우 (깃헙에서 대소문자 구분을 하지않아서 lower 처리후 비교)
-                if contributor.get('type') == 'User' and \
-                        contributor.get('login').lower() == self.github_user.username.lower():
+                if self.is_contributor(contributor, self.github_user.username):
                     contributions = contributor.get('contributions', 0)
                     return ContributorDto(
                         languages=self.record_language(repository.languages_url) if contributions > 0 else '',
@@ -147,9 +143,7 @@ class RepositoryService:
         new_language_list = []
         exists_languages = set(Language.objects.filter(
             type__in=self.update_languages.keys()
-        ).values_list(
-            'type', flat=True
-        ))
+        ).values_list('type', flat=True))
         new_languages = set(self.update_languages.keys()) - exists_languages
 
         for language in new_languages:
@@ -192,24 +186,18 @@ class RepositoryService:
 
         for idx, user_repo in enumerate(user_repositories):
             if user_repo.full_name == repository.full_name and user_repo.owner == repository.owner:
-                is_exist_repo = True
-                user_repositories.pop(idx)
                 update_fields = []
+                is_exist_repo = True
                 contribution = 0
 
-                # User 가 Repository 의 contributor 인지 확인한다.
-                async with aiohttp.ClientSession() as session:
-                    async with session.get(repository.contributors_url, headers=settings.GITHUB_API_HEADER) as res:
-                        response_data = await res.text()
-                        response_status = res.status
+                user_repositories.pop(idx)
+                response_status, content = await GithubAdapter.get_infos(repository.contributors_url)
 
                 if response_status == 200:
-                    for contributor in json.loads(response_data):
+                    for contributor in json.loads(content):
                         # User 타입이고 contributor 가 본인인 경우 (깃헙에서 대소문자 구분을 하지않아서 lower 처리후 비교)
-                        if contributor.get('type') == 'User' and \
-                                contributor.get('login').lower() == self.github_user.username.lower():
+                        if self.is_contributor(contributor, self.github_user.username):
                             contribution = contributor.get('contributions')
-                            # languages number update
                             self.record_language(repository.languages_url)
 
                 if user_repo.contribution != contribution:
@@ -227,7 +215,7 @@ class RepositoryService:
                 self.total_contribution += contribution
                 break
 
-        # 새로운 레포지토리
+        # 새로운 레포지토리인 경우
         if not is_exist_repo:
             _contribution, new_repository = self.create_repository(repository)
 
@@ -236,9 +224,11 @@ class RepositoryService:
 
             self.total_contribution += _contribution
 
-    async def update_repository_futures(self, repositories, user_repositories: list):
+    async def get_update_repository_futures(self, repositories, user_repositories: list):
         futures = [
-            asyncio.ensure_future(self.update_repository(repository, user_repositories)) for repository in repositories
+            asyncio.create_task(
+                self.update_repository(repository, user_repositories)
+            ) for repository in repositories
         ]
 
         await asyncio.gather(*futures)
@@ -246,6 +236,12 @@ class RepositoryService:
     @staticmethod
     def create_dto(repository_data: dict) -> RepositoryDto:
         return RepositoryDto(**repository_data)
+
+    @staticmethod
+    def is_contributor(contributor: dict, github_user_name: str):
+        if contributor.get('type') == 'User' and contributor.get('login').lower() == github_user_name.lower():
+            return True
+        return False
 
     @staticmethod
     def is_fork_repository(fork: bool):

@@ -2,9 +2,6 @@ import asyncio
 import json
 from typing import List
 
-import aiohttp
-from django.conf import settings
-
 from adapter.githubs import GithubAdapter
 from apps.githubs.models import GithubUser, UserOrganization, Organization
 from core.github_dto import OrganizationDto, RepositoryDto
@@ -109,27 +106,21 @@ class OrganizationService:
         """
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
-        loop.run_until_complete(self.save_organization_repository_futures(self.new_repositories))
+        loop.run_until_complete(self.get_organization_repository_futures(self.new_repositories))
 
-    async def append_organization_repository(self, repository: RepositoryDto):  # 코루틴 정의
-        async with aiohttp.ClientSession() as session:
-            async with session.get(repository.contributors_url, headers=settings.GITHUB_API_HEADER) as res:
-                response_text = await res.text()
+    async def get_organization_repository_futures(self, repositories: list):
+        async def __inner(repository: RepositoryDto):
+            res, content = await GithubAdapter.get_infos(repository.contributors_url)
 
-                if res.status != 200:
-                    return
+            if res.status != 200:
+                return
 
-                # 451은 레포지토리 접근 오류('Repository access blocked') - 저작권에 따라 block 될 수 있음
-                for contributor in json.loads(response_text):
-                    if self.github_user.username.lower() == contributor.get('login').lower():
-                        self.repositories.append(repository)
-                        break
+            for contributor in json.loads(content):
+                if self.github_user.username.lower() == contributor.get('login').lower():
+                    self.repositories.append(repository)
+                    break
 
-    async def save_organization_repository_futures(self, repositories: list):
-        futures = [
-            asyncio.ensure_future(self.append_organization_repository(repository)) for repository in repositories
-        ]
-
+        futures = [asyncio.create_task(__inner(repository)) for repository in repositories]
         await asyncio.gather(*futures)
 
     @staticmethod

@@ -2,6 +2,7 @@ import json
 from enum import Enum
 from typing import Optional
 
+import aiohttp
 import requests
 from django.conf import settings
 from furl import furl
@@ -39,6 +40,27 @@ class GithubAdapter:
             return None
 
         return res
+
+    @classmethod
+    async def _async_handle_request(
+        cls,
+        url: str,
+        method: RequestMethod,
+        params: Optional[dict] = None
+    ):
+        async with aiohttp.ClientSession() as session:
+            if method == RequestMethod.POST:
+                async with session.post(url, headers=cls.headers) as res:
+                    response_text = await res.text()
+            else:
+                async with session.get(url, headers=cls.headers, params=params) as res:
+                    response_text = await res.text()
+
+        return res, response_text
+
+    @classmethod
+    async def get_infos(cls, url):
+        return await cls._async_handle_request(url, RequestMethod.GET)
 
     @classmethod
     def check_rate_limit(cls) -> int:

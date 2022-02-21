@@ -2,16 +2,18 @@ import json
 from contextlib import contextmanager
 from typing import Optional
 
+from rest_framework import status
+
 from apps.githubs.models import GithubUser
 from apps.reservations.models import UpdateUserQueue
 
 
-PASSING_RESPONSE_STATUS = [204, 451]
+# 204: 컨텐츠 제공안함
+# 451: 저작권
+PASSING_RESPONSE_STATUS = [status.HTTP_204_NO_CONTENT, status.HTTP_405_METHOD_NOT_ALLOWED]
 REASON_RATE_LIMIT = 'rate limit exceeded'
 REASON_FORBIDDEN = 'Forbidden'
 PASSING_STATUS = 'pass'
-# 204: 컨텐츠 제공안함
-# 451: 저작권
 
 
 class GitHubUserDoesNotExist(Exception):
@@ -33,9 +35,9 @@ def manage_api_call_fail(
     if not github_user:
         return None
 
-    if status_code == 403 and reason == REASON_RATE_LIMIT:
+    if status_code == status.HTTP_403_FORBIDDEN and reason == REASON_RATE_LIMIT:
         raise RateLimit()
-    elif status_code == 403 and reason == REASON_FORBIDDEN:
+    elif status_code == status.HTTP_403_FORBIDDEN and reason == REASON_FORBIDDEN:
         return REASON_FORBIDDEN
     elif status_code in PASSING_RESPONSE_STATUS:
         return PASSING_STATUS

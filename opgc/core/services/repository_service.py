@@ -152,7 +152,7 @@ class RepositoryService:
         if new_language_list:
             Language.objects.bulk_create(new_language_list)
 
-        # 가존에 있던 UserLanguage 업데이트
+        # 기존에 있던 UserLanguage 업데이트
         new_user_languages = []
         user_language_qs = UserLanguage.objects.prefetch_related('language').filter(
             github_user_id=self.github_user.id,

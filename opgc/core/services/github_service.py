@@ -173,11 +173,14 @@ class GithubInformationService:
         """
         last_user_rank = GithubUser.objects.order_by('-user_rank').values_list('user_rank', flat=True)[0]
         if not user_rank:
-            return GithubUser.UNRANK
+            return GithubUser.IRON
 
-        # 챌린저 2%
-        if user_rank == 1 or user_rank <= last_user_rank * 0.02:
+        # 챌린저 1%
+        if user_rank == 1 or user_rank <= last_user_rank * 0.01:
             tier = GithubUser.CHALLENGER
+        # 그랜드 마스터 1~2%
+        elif last_user_rank * 0.01 < user_rank <= last_user_rank * 0.02:
+            tier = GithubUser.GRAND_MASTER
         # 마스터 2~5%
         elif last_user_rank * 0.02 < user_rank <= last_user_rank * 0.05:
             tier = GithubUser.MASTER
@@ -198,7 +201,7 @@ class GithubInformationService:
             tier = GithubUser.BRONZE
         # 언랭: 95.%~
         else:
-            tier = GithubUser.UNRANK
+            tier = GithubUser.IRON
 
         return tier
 

@@ -161,6 +161,8 @@
 </foreignObject>
     {% if github_user.get_tier_display == 'Challenger' %}
         {% include 'tag/../tier/challneger.html' %}
+    {% elif github_user.get_tier_display == 'GrandMaster' %}
+        {% include 'tag/../tier/grand_master.html' %}
     {% elif github_user.get_tier_display == 'Master' %}
         {% include 'tag/../tier/master.html' %}
     {% elif github_user.get_tier_display == 'Diamond' %}

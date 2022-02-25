@@ -4,16 +4,17 @@ from core.db.models import CustomBaseModel
 
 
 class GithubUser(CustomBaseModel):
-    UNRANK, BRONZE, SILVER, GOLD, PLATINUM, DIAMOND, MASTER, CHALLENGER = 0, 5, 10, 15, 20, 25, 30, 35
+    IRON, BRONZE, SILVER, GOLD, PLATINUM, DIAMOND, MASTER, GRAND_MASTER, CHALLENGER = 0, 5, 10, 15, 20, 25, 30, 33, 35
     GITHUB_RANK_CHOICES = (
         (CHALLENGER, 'Challenger'),
+        (GRAND_MASTER, 'GrandMaster'),
         (MASTER, 'Master'),
         (DIAMOND, 'Diamond'),
         (PLATINUM, 'Platinum'),
         (GOLD, 'Gold'),
         (SILVER, 'Silver'),
         (BRONZE, 'Bronze'),
-        (UNRANK, 'UnRank')
+        (IRON, 'Iron')
     )
 
     NONE, COMPLETED, WAITING, UPDATING, FAIL = 0, 5, 10, 15, 20
@@ -35,7 +36,7 @@ class GithubUser(CustomBaseModel):
                                   verbose_name='깃헙 프로필 URL')
     total_contribution = models.IntegerField(verbose_name='총 컨트리뷰션', default=0)
     total_stargazers_count = models.IntegerField(default=0, verbose_name='총 스타(star)수')
-    tier = models.SmallIntegerField(choices=GITHUB_RANK_CHOICES, default=UNRANK, blank=False, verbose_name='티어')
+    tier = models.SmallIntegerField(choices=GITHUB_RANK_CHOICES, default=IRON, blank=False, verbose_name='티어')
     user_rank = models.IntegerField(default=None, null=True, verbose_name='현재 랭킹')
     previous_user_rank = models.IntegerField(default=None, null=True, verbose_name='이전 랭킹')
     company = models.CharField(max_length=100, default=None, null=True, blank=True, verbose_name='회사')

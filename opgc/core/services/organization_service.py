@@ -125,10 +125,4 @@ class OrganizationService:
 
     @staticmethod
     def create_dto(organization_data: dict) -> OrganizationDto:
-        return OrganizationDto(
-            name=organization_data.get('login'),
-            description=organization_data.get('description'),
-            logo=organization_data.get('avatar_url'),
-            repos_url=organization_data.get('repos_url')
-        )
-
+        return OrganizationDto(**organization_data)

@@ -38,11 +38,11 @@ class OrganizationDto:
     logo: str  # 프로필(로고)
     repos_url: str  # repository URL
 
-    def __init__(self, name: str, description: str, logo: str, repos_url: str):
-        self.name = name
-        self.description = description or ''
-        self.logo = logo or ''
-        self.repos_url = repos_url or ''
+    def __init__(self, **kwargs):
+        self.name = kwargs.get('login', '')
+        self.description = kwargs.get('description', '')
+        self.logo = kwargs.get('avatar_url', '')
+        self.repos_url = kwargs.get('repos_url', '')
 
 
 @dataclass

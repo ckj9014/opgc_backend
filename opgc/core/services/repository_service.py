@@ -86,7 +86,6 @@ class RepositoryService:
         contributions 와 language 확인을 위해 아래 로직을 타야함
         Too many Contributor 403 오류인 경우만 어쩔수 없이 contributions 확인 불가
         """
-        no_contributor = ContributorDto(languages='', is_contributor=False, contributions=0)
         params = {'per_page': self.github_api_per_page, 'page': 1}
 
         for i in range(0, (self.github_user.public_repos // self.github_api_per_page) + 1):
@@ -112,7 +111,11 @@ class RepositoryService:
                         contributions=contributions
                     )
 
-        return no_contributor
+        return ContributorDto(
+            languages='',
+            is_contributor=False,
+            contributions=0
+        )
 
     def record_language(self, languages_url: str) -> str:
         """

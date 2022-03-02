@@ -27,19 +27,31 @@
           background: #1D1F20;
         }
 
-        .normal-border {
+        {# 프로필 전체 테마 설정 관련#}
+        .profile-base {
+            display: flex;
+            font-size: x-small;
+            border-radius: 10px;
+        }
+
+        .profile-base.theme-basic{
+            background-color: white;
+            height: 148px;
             border: 1px solid;
             border-radius: 10px;
         }
 
-        .gradient-border {
-          --borderWidth: 3px;
-          background: #1D1F20;
-          position: relative;
-          border-radius: var(--borderWidth);
+        .profile-base.theme-rainbow{
+            display: flex;
+            background-color: white;
+            margin: 5px;
+            height: 140px;
+            --borderWidth: 3px;
+            position: initial;
+            border-radius: var(--borderWidth);
         }
 
-        .gradient-border:after {
+        .profile-base.theme-rainbow:after {
             content: '';
             position: absolute;
             top: calc(-1 * var(--borderWidth));
@@ -65,6 +77,38 @@
             }
         }
 
+        .profile-base.theme-prism{
+            margin: 5px;
+            height: 140px;
+            --borderWidth: 3px;
+            position: relative;
+            border-radius: var(--borderWidth);
+        }
+
+        .profile-base.theme-prism:after {
+            content: '';
+            position: absolute;
+            top: calc(-1 * var(--borderWidth));
+            left: calc(-1 * var(--borderWidth));
+            height: calc(100% + var(--borderWidth) * 2);
+            width: calc(100% + var(--borderWidth) * 2);
+            background: linear-gradient(60deg, #f79533, #f37055, #ef4e7b, #a166ab, #5073b8, #1098ad, #07b39b, #6fba82);
+            border-radius: calc(2 * var(--borderWidth));
+            z-index: -1;
+            animation: animatedgradient 3s ease alternate infinite;
+            background-size: 300% 300%;
+        }
+
+        .profile-base.theme-dracula{
+            background-color: #282a36;
+            height: 148px;
+            border: 1px solid;
+            border-radius: 10px;
+            color: white;
+            font-size: small;
+        }
+
+        {# 기본 #}
         .stagger {
             opacity: 0;
             animation: fadeInAnimation 0.9s ease-in-out forwards;
@@ -73,7 +117,6 @@
         .rank-text {
             margin-left: 150px;
             font: 700 15px 'Segoe UI', Ubuntu, Sans-Serif;
-            color: #333333;
             animation: scaleInAnimation 0.6s ease-in-out forwards;
         }
 
@@ -105,15 +148,6 @@
             }
         }
 
-        .profile-base {
-            background: white;
-            display: flex;
-            font-size: x-small;
-            border-radius: 10px;
-            height: 140px;
-            margin: 5px;
-        }
-
         .profile-base ul {
             list-style: none;
             padding-left: 0;
@@ -129,7 +163,7 @@
 
         .profile-detail {
             display: inline-block;
-            width: 140px;
+            width: 145px;
         }
 
         .profile-detail .emoji {
@@ -139,10 +173,20 @@
 
         </style>
 
-        <div class="profile-base {% if border == 'gradient' %}gradient-border{% else %}normal-border{% endif %}">
+        <div class="profile-base
+            {% if theme == 'basic' %}
+                theme-basic
+            {% elif theme == 'rainbow' %}
+                theme-rainbow
+            {% elif theme == 'prism' %}
+                theme-prism
+            {% elif theme == 'dracula' %}
+                theme-dracula
+            {% endif %}
+        ">
             <div class="rank">
             </div>
-            <div class="inform rank-text">
+            <div class="inform rank-text base">
                 <ul>
                     <li><div class="profile-name">OPGC Rank ({{ github_user.username }})</div></li>
                     <li>

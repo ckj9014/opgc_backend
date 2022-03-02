@@ -9,18 +9,20 @@
 
 
 ### 🤩 README.md 에 OPGC 태그 달기
-<a href="https://opgc.me/#/users/JAY-Chan9yu" target="_blank"><img src="https://api.opgc.me/githubs/users/JAY-Chan9yu/tag/?border=gradient" /></a>
-<a href="https://opgc.me/#/users/JAY-Chan9yu" target="_blank"><img src="https://api.opgc.me/githubs/users/JAY-Chan9yu/tag/?border=normal" /></a>
+<a href="https://opgc.me/#/users/JAY-Chan9yu" target="_blank"><img src="https://api.opgc.me/githubs/users/JAY-Chan9yu/tag/?theme=basic" /></a>
+<a href="https://opgc.me/#/users/JAY-Chan9yu" target="_blank"><img src="https://api.opgc.me/githubs/users/JAY-Chan9yu/tag/?theme=rainbow" /></a>
+<a href="https://opgc.me/#/users/JAY-Chan9yu" target="_blank"><img src="https://api.opgc.me/githubs/users/JAY-Chan9yu/tag/?theme=prism" /></a>
+<a href="https://opgc.me/#/users/JAY-Chan9yu" target="_blank"><img src="https://api.opgc.me/githubs/users/JAY-Chan9yu/tag/?theme=dracula" /></a>
 
 [OPGC](https://opgc.me/#/main)에 접속해서 깃헙 아이디를 검색하세요! OPGC서버에 등록된 이후에 위 태그를 사용할 수 있습니다. <br><br>
 ![스크린샷 2022-02-22 오전 2 39 57](https://user-images.githubusercontent.com/24591259/155004723-5ef6be0a-5a7c-4349-a7d8-5e516e7a4b22.png)
 <br><br>태그는 사이트에서 리드미 복사하기 버튼을 클릭하면 클립보드에 복사됩니다.<br>
 혹은 아래와 같은 형태로 바로 사용 가능합니다 (단, OPGC에 등록된 깃헙아이디만 가능합니다.) <br>
-`<img src="https://api.opgc.me/githubs/users/{{깃헙아이디}}/tag/?border=normal" />` <br>
+`<img src="https://api.opgc.me/githubs/users/{{깃헙아이디}}/tag/?theme=basic" />` <br>
 
 |옵션명|설명|
 |----|----|
-|border|테두리 설정 (gradient, normal)|
+|theme|테마 설정 (basic, rainbow, prism, dracula)|
 
 
 # 🚀 Project

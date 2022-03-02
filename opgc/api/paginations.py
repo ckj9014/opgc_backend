@@ -62,3 +62,9 @@ class TotalScorePagination(BaseCursorPagination):
     page_size = 10
     max_page_size = 1000
     ordering = ('-total_score',)
+
+
+class CreatedPagination(BaseCursorPagination):
+    page_size = 10
+    max_page_size = 1000
+    ordering = ('-created',)

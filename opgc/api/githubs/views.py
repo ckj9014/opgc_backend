@@ -11,7 +11,7 @@ from rest_framework.response import Response
 from api.exceptions import NotExistsGithubUser, RateLimitGithubAPI
 from api.githubs.serializers import OrganizationSerializer, RepositorySerializer, LanguageSerializer, \
     GithubUserListSerializer, GithubUserSerializer
-from api.paginations import IdOrderingPagination, TierOrderingPagination, TotalScorePagination, DescIdOrderingPagination
+from api.paginations import IdOrderingPagination, TierOrderingPagination, DescIdOrderingPagination, CreatedPagination
 from api.ranks.serializers import TierSerializer
 from apps.githubs.models import GithubUser, Organization, Repository, Language
 from utils.exceptions import GitHubUserDoesNotExist, RateLimit
@@ -28,7 +28,7 @@ class GithubUserViewSet(mixins.UpdateModelMixin,
 
     queryset = GithubUser.objects.prefetch_related('organization', 'repository', 'language').all()
     serializer_class = GithubUserListSerializer
-    pagination_class = TotalScorePagination
+    pagination_class = CreatedPagination
     lookup_url_kwarg = 'username'
     lookup_field = 'username'
 
@@ -107,9 +107,9 @@ class GithubUserViewSet(mixins.UpdateModelMixin,
         # )
         # todo: 함수 정리하기
         github_user = self.get_object()
-        border = request.GET.get('border', 'normal')
+        theme = request.GET.get('theme', 'basic')
         template = loader.get_template('tag/profile.html')
-        context = {'github_user': github_user, 'border': border}
+        context = {'github_user': github_user, 'theme': theme}
         response = HttpResponse(content=template.render(context, request))
         response['Content-Type'] = 'image/svg+xml'
         response['Cache-Control'] = 'no-cache, no-store, must-revalidate'

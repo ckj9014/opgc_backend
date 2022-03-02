@@ -1,7 +1,7 @@
 from rest_framework import mixins, viewsets, exceptions
 from rest_framework.response import Response
 
-from api.paginations import ScoreOrderingPagination, TotalScorePagination
+from api.paginations import ScoreOrderingPagination, UserRankOrderingPagination
 from api.ranks.serializers import RankSerializer, TierSerializer
 from apps.githubs.models import GithubUser
 from apps.ranks.models import UserRank
@@ -43,7 +43,7 @@ class OverallRankViewSet(mixins.ListModelMixin,
 
     queryset = GithubUser.objects.all()
     serializer_class = TierSerializer
-    pagination_class = TotalScorePagination
+    pagination_class = UserRankOrderingPagination
 
     def list(self, request, *args, **kwargs):
         queryset = self.filter_queryset(self.get_queryset())

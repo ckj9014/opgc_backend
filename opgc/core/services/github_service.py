@@ -178,26 +178,26 @@ class GithubInformationService:
         # 챌린저 1%
         if user_rank == 1 or user_rank <= last_user_rank * 0.01:
             tier = GithubUser.CHALLENGER
-        # 그랜드 마스터 1~2%
-        elif last_user_rank * 0.01 < user_rank <= last_user_rank * 0.02:
+        # 그랜드 마스터 1~5%
+        elif last_user_rank * 0.01 < user_rank <= last_user_rank * 0.05:
             tier = GithubUser.GRAND_MASTER
-        # 마스터 2~5%
-        elif last_user_rank * 0.02 < user_rank <= last_user_rank * 0.05:
+        # 마스터 5~10%
+        elif last_user_rank * 0.05 < user_rank <= last_user_rank * 0.1:
             tier = GithubUser.MASTER
-        # 다이아: 5~15%
-        elif last_user_rank * 0.05 < user_rank <= last_user_rank * 0.15:
+        # 다이아: 10~20%
+        elif last_user_rank * 0.1 < user_rank <= last_user_rank * 0.2:
             tier = GithubUser.DIAMOND
-        # 플래티넘 15~25%
-        elif last_user_rank * 0.15 < user_rank <= last_user_rank * 0.25:
+        # 플래티넘 20~30%
+        elif last_user_rank * 0.2 < user_rank <= last_user_rank * 0.3:
             tier = GithubUser.PLATINUM
-        # 골드: 25~35%
-        elif last_user_rank * 0.25 < user_rank <= last_user_rank * 0.35:
+        # 골드: 30~50%
+        elif last_user_rank * 0.3 < user_rank <= last_user_rank * 0.5:
             tier = GithubUser.GOLD
-        # 실버: 35%~60%
-        elif last_user_rank * 0.35 < user_rank <= last_user_rank * 0.6:
+        # 실버: 50%~70%
+        elif last_user_rank * 0.5 < user_rank <= last_user_rank * 0.7:
             tier = GithubUser.SILVER
-        # 브론즈: 60~95%
-        elif last_user_rank * 0.6 < user_rank <= last_user_rank * 0.95:
+        # 브론즈: 70~95%
+        elif last_user_rank * 0.7 < user_rank <= last_user_rank * 0.95:
             tier = GithubUser.BRONZE
         # 언랭: 95.%~
         else:

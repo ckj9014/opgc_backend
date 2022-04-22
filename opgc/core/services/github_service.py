@@ -140,7 +140,7 @@ class GithubInformationService:
             self.github_user.continuous_commit_day = continuous_count
 
         total_score = self.get_total_score(self.github_user)
-        user_rank = self.update_user_ranking(total_score)
+        user_rank = self.update_user_ranking(total_score, self.github_user)
 
         self.github_user.total_score = total_score
         self.github_user.previous_user_rank = self.github_user.user_rank
@@ -215,12 +215,14 @@ class GithubInformationService:
         return tier
 
     @staticmethod
-    def update_user_ranking(total_score: int):
+    def update_user_ranking(total_score: int, github_user: GithubUser):
         """
         total score 로 전체 유저의 순위를 계산하는 함수
         """
         return GithubUser.objects.filter(
             total_score__gt=total_score
+        ).exclude(
+            id=github_user.id
         ).values('total_score').annotate(Count('id')).count() + 1
 
     @staticmethod

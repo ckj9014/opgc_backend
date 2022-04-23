@@ -25,7 +25,7 @@ def update_github_basic_information(github_user: GithubUser):
     #     github_user.continuous_commit_day = continuous_count
 
     github_user.total_score = github_information_service.get_total_score(github_user)
-    github_user.user_rank = github_information_service.update_user_ranking(github_user.total_score)
+    github_user.user_rank = github_information_service.update_user_ranking(github_user.total_score, github_user)
     github_user.tier = github_information_service.get_tier_statistics(github_user.user_rank)
     github_user.save(update_fields=['total_score', 'user_rank', 'tier'])
 

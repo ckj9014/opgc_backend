@@ -41,7 +41,7 @@ class OverallRankViewSet(mixins.ListModelMixin,
     endpoint : ranks/overall/
     """
 
-    queryset = GithubUser.objects.all()
+    queryset = GithubUser.objects.filter(user_rank__isnull=False)
     serializer_class = TierSerializer
     pagination_class = UserRankOrderingPagination
 

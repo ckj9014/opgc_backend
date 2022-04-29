@@ -1,7 +1,7 @@
 from dataclasses import asdict
 from typing import Optional
 
-from django.db.models import Count
+from django.db.models import Count, Max
 from sentry_sdk import capture_exception
 
 from adapter.githubs import GithubAdapter
@@ -140,7 +140,7 @@ class GithubInformationService:
             self.github_user.continuous_commit_day = continuous_count
 
         total_score = self.get_total_score(self.github_user)
-        user_rank = self.update_user_ranking(total_score)
+        user_rank = self.update_user_ranking(total_score, self.github_user)
 
         self.github_user.total_score = total_score
         self.github_user.previous_user_rank = self.github_user.user_rank
@@ -157,14 +157,23 @@ class GithubInformationService:
     def get_total_score(github_user: GithubUser) -> int:
         """
         종합 점수 계산 정첵
-        기여도 - 15%, 1일1커밋(x10) - 75%, 팔로워 - 5%, 팔로잉 - 5%
+        - 각 항목별 백분율을 구한뒤 가중치를 적용하여 종합 점수를 구한다.
         """
-        return int(
-            github_user.total_contribution * 0.15 +
-            github_user.continuous_commit_day * 7.5 +
-            github_user.followers * 0.05 +
-            github_user.following * 0.05
+        weights = [95, 4, 0.5, 0.5]  # 각 항목별 가중치
+        max_scores = GithubUser.objects.aggregate(
+            continuous_commit_day=Max('continuous_commit_day'),
+            total_contribution=Max('total_contribution'),
+            followers=Max('followers'),
+            following=Max('following'),
         )
+
+        continuous_commit_day = (github_user.continuous_commit_day / max_scores['continuous_commit_day']) * 100 * weights[0]
+        total_contribution = (github_user.total_contribution / max_scores['total_contribution']) * 100 * weights[1]
+        followers = (github_user.followers / max_scores['followers']) * 100 * weights[2]
+        following = (github_user.following / max_scores['following']) * 100 * weights[3]
+
+        # 정수를 가지고 종합점수를 비교하기 위해 1000을 곱하여 처리한다.
+        return int((total_contribution + continuous_commit_day + followers + following) / sum(weights) * 1000)
 
     @staticmethod
     def get_tier_statistics(user_rank: int) -> int:
@@ -206,12 +215,14 @@ class GithubInformationService:
         return tier
 
     @staticmethod
-    def update_user_ranking(total_score: int):
+    def update_user_ranking(total_score: int, github_user: GithubUser):
         """
         total score 로 전체 유저의 순위를 계산하는 함수
         """
         return GithubUser.objects.filter(
             total_score__gt=total_score
+        ).exclude(
+            id=github_user.id
         ).values('total_score').annotate(Count('id')).count() + 1
 
     @staticmethod

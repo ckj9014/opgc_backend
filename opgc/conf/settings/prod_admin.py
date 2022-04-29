@@ -12,7 +12,7 @@ IS_PROD = True
 ALLOWED_HOSTS = ['OPGC_ALLOWED_HOSTS']
 
 # Gihub api auth token
-OPGC_TOKEN = 'OPGG_GITHUB_TOKEN'
+OPGC_TOKEN = 'OPGC_GITHUB_TOKEN'
 GITHUB_API_HEADER = {'Authorization': f'token {OPGC_TOKEN}'}
 
 # 임시

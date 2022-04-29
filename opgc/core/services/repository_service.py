@@ -194,9 +194,9 @@ class RepositoryService:
                 contribution = 0
 
                 user_repositories.pop(idx)
-                response_status, content = await GithubAdapter.get_infos(repository.contributors_url)
+                res, content = await GithubAdapter.get_infos(repository.contributors_url)
 
-                if response_status == 200:
+                if res.status == 200:
                     for contributor in json.loads(content):
                         # User 타입이고 contributor 가 본인인 경우 (깃헙에서 대소문자 구분을 하지않아서 lower 처리후 비교)
                         if self.is_contributor(contributor, self.github_user.username):

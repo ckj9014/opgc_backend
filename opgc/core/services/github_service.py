@@ -5,8 +5,9 @@ from django.db.models import Count, Max
 from sentry_sdk import capture_exception
 
 from adapter.githubs import GithubAdapter
+from api.exceptions import NotUserType
 from apps.githubs.models import GithubUser
-from core.github_dto import UserInformationDto
+from core.github_dto import UserInformationDto, UserType
 from utils.exceptions import RateLimit, insert_queue
 from core.services.organization_service import OrganizationService
 from core.services.repository_service import RepositoryService
@@ -65,6 +66,10 @@ class GithubInformationService:
         )
 
     def get_or_create_github_user(self, user_information: UserInformationDto) -> GithubUser:
+        # 타입이 User인 경우에만 실행
+        if user_information.type != UserType.user:
+            raise NotUserType
+
         try:
             update_fields = ['status']
             github_user = GithubUser.objects.get(username=self.username)

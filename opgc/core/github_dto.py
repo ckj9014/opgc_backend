@@ -1,9 +1,16 @@
 from dataclasses import dataclass
+from enum import Enum
+
+
+class UserType(Enum):
+    user = 'User'
+    organization = 'Organization'
 
 
 @dataclass
 class UserInformationDto:
     name: str  # 이름
+    type: UserType
     email: str  # 이메일
     location: str  # 국가
     avatar_url: str  # 프로필 URL
@@ -29,6 +36,7 @@ class UserInformationDto:
         self.following = kwargs.get('following')
         self.repos_url = kwargs.get('repos_url')
         self.organizations_url = kwargs.get('organizations_url')
+        self.type = UserType(kwargs.get('type'))
 
 
 @dataclass

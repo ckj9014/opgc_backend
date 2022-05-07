@@ -23,9 +23,8 @@ class GithubUserViewSet(mixins.UpdateModelMixin,
                         mixins.ListModelMixin,
                         viewsets.GenericViewSet):
     """
-    endpoint : githubs/users/:username
+    깃헙유저 등록, 업데이트를 관리하는 ViewSet
     """
-
     queryset = GithubUser.objects.prefetch_related('organization', 'repository', 'language').all()
     serializer_class = GithubUserListSerializer
     pagination_class = CreatedPagination
@@ -124,9 +123,6 @@ class GithubUserViewSet(mixins.UpdateModelMixin,
 class OrganizationViewSet(mixins.ListModelMixin,
                           mixins.RetrieveModelMixin,
                           viewsets.GenericViewSet):
-    """
-    endpoint : githubs/users/:user_pk/organizations/
-    """
 
     queryset = Organization.objects.all()
     serializer_class = OrganizationSerializer
@@ -145,9 +141,6 @@ class OrganizationViewSet(mixins.ListModelMixin,
 
 class RepositoryViewSet(mixins.ListModelMixin,
                         viewsets.GenericViewSet):
-    """
-    endpoint : githubs/:user_pk/repositories/
-    """
 
     queryset = Repository.objects.all()
     serializer_class = RepositorySerializer
@@ -162,22 +155,15 @@ class RepositoryViewSet(mixins.ListModelMixin,
 
 class LanguageViewSet(mixins.ListModelMixin,
                       viewsets.GenericViewSet):
-    """
-    endpoint : githubs/languages/
-    """
 
     queryset = Language.objects.all()
     serializer_class = LanguageSerializer
     pagination_class = IdOrderingPagination
 
 
+# todo: 곧 삭제 예정인 API
 class TierRankViewSet(mixins.ListModelMixin,
                       viewsets.GenericViewSet):
-    """
-    endpoint : githubs/tier/
-    todo: 곧 삭제 예정인 API
-    """
-
     queryset = GithubUser.objects.all()
     serializer_class = TierSerializer
     pagination_class = TierOrderingPagination

@@ -7,6 +7,18 @@ class NotExistsGithubUser(APIException):
     default_code = 'NOT_EXISTS'
 
 
+class NotUserType(APIException):
+    status_code = 404
+    default_detail = '해당 username에 매칭되는 User가 없습니다.'
+    default_code = 'NOT_USER_TYPE'
+
+
+class BlockedUser(APIException):
+    status_code = 404
+    default_detail = '등록할 수 없는 유저입니다 (Block User)'
+    default_code = 'BLOCKED_USER'
+
+
 class RateLimitGithubAPI(APIException):
     """
     github_user 가 없거나 rate_limit 로 인해 업데이트를 할 수 없는경우

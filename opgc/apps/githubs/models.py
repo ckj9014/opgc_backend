@@ -101,3 +101,10 @@ class Achievements(CustomBaseModel):
     달성 목표 (재미를 위한 컨텐츠)
     """
     summary = models.CharField(verbose_name='summary', max_length=200, blank=False)
+
+
+class BlockUser(CustomBaseModel):
+    """
+    봇 혹은 어뷰징등으로 판단되는 유저 블랙리스트
+    """
+    username = models.CharField(unique=True, max_length=200, null=False, verbose_name='Github ID')

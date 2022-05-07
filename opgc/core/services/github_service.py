@@ -5,8 +5,8 @@ from django.db.models import Count, Max
 from sentry_sdk import capture_exception
 
 from adapter.githubs import GithubAdapter
-from api.exceptions import NotUserType
-from apps.githubs.models import GithubUser
+from api.exceptions import NotUserType, BlockedUser
+from apps.githubs.models import GithubUser, BlockUser
 from core.github_dto import UserInformationDto, UserType
 from utils.exceptions import RateLimit, insert_queue
 from core.services.organization_service import OrganizationService
@@ -66,7 +66,11 @@ class GithubInformationService:
         )
 
     def get_or_create_github_user(self, user_information: UserInformationDto) -> GithubUser:
-        # 타입이 User인 경우에만 실행
+        # 블락된 유저는 제외
+        if self.is_blocked_user(self.username) is True:
+            raise BlockedUser
+
+        # 타입이 User 인 경우에만 실행
         if user_information.type != UserType.user:
             raise NotUserType
 
@@ -101,6 +105,10 @@ class GithubInformationService:
             SlackService.slack_notify_new_user(github_user)
 
         return github_user
+
+    @staticmethod
+    def is_blocked_user(username: str) -> bool:
+        return BlockUser.objects.filter(username=username).exists()
 
     def get_user_repository_urls(self, user_information: UserInformationDto) -> list:
         """

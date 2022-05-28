@@ -175,3 +175,26 @@ class SlackService:
 
         slack = slackweb.Slack(url=cls.cron_log_channel)
         slack.notify(attachments=attachments)
+
+    @classmethod
+    def slack_notice_block(cls, username: str):
+        fields = []
+
+        fields.append({
+            "title": "유저이름",
+            "value": f'{username}',
+            "short": True
+        })
+
+        attachments = [
+            {
+                "color": "#36a64f",
+                "title": f'유저가 Block 되었습니다',
+                "fields": fields,
+            }
+        ]
+
+        attachments[0]['pretext'] = f'[{"PROD" if settings.IS_PROD else "LOCAL"}] 블랙리스트 등록'
+
+        slack = slackweb.Slack(url=cls.cron_log_channel)
+        slack.notify(attachments=attachments)

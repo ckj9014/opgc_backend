@@ -30,6 +30,16 @@ class GithubInformationService:
         self.new_repository_list = []  # 새로 생성될 레포지토리 리스트
         self.is_insert_queue = is_insert_queue
 
+    def block_user(self):
+        """
+        오토커밋, 봇 등의 레포지토리를 가지고 있는 유저는 block
+        # todo: 프론트에서 block 관련 내용 표시하도록
+        """
+        self.github_user.delete()
+        BlockUser.objects.get_or_create(username=self.username)
+        SlackService.slack_notice_block(username=self.username)
+        raise BlockedUser()
+
     def update(self):
         # 0. Github API 호출 가능한지 체크
         self.get_rate_remaining()
@@ -47,6 +57,9 @@ class GithubInformationService:
         repo_service = RepositoryService(github_user=self.github_user)
         for repository in self.get_user_repository_urls(user_information):
             repo_service.repositories.append(repo_service.create_dto(repository))
+
+        if repo_service.has_auto_commit_repository():
+            self.block_user()
 
         # 3. Organization 정보와 연관된 repository 업데이트
         org_service = OrganizationService(github_user=self.github_user)
@@ -120,8 +133,8 @@ class GithubInformationService:
 
         for i in range(0, (self.github_user.public_repos // self.github_api_per_page) + 1):
             params['page'] = i + 1
-            repositories, status_code = self.github_adapter.get_repository_infos(user_information.repos_url, params)
-            repositories.extend(repositories)
+            repository_info, status_code = self.github_adapter.get_repository_infos(user_information.repos_url, params)
+            repositories.extend(repository_info)
 
         # todo: 레포지토리가 너무 많은경우 한번 프로세스에 async 로 처리하는데 서버 성능이 못따라감.
         #       일단 250개 미만으로 업데이트 하고, 이 부분에 대해서 고민해보기 (일단 리포팅만)
@@ -197,11 +210,11 @@ class GithubInformationService:
         if not user_rank:
             return GithubUser.IRON
 
-        # 챌린저 1%
-        if user_rank == 1 or user_rank <= last_user_rank * 0.01:
+        # 챌린저 2%
+        if user_rank == 1 or user_rank <= last_user_rank * 0.02:
             tier = GithubUser.CHALLENGER
-        # 그랜드 마스터 1~5%
-        elif last_user_rank * 0.01 < user_rank <= last_user_rank * 0.05:
+        # 그랜드 마스터 2~5%
+        elif last_user_rank * 0.02 < user_rank <= last_user_rank * 0.05:
             tier = GithubUser.GRAND_MASTER
         # 마스터 5~10%
         elif last_user_rank * 0.05 < user_rank <= last_user_rank * 0.1:

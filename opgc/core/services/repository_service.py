@@ -8,6 +8,13 @@ from core.github_dto import RepositoryDto, ContributorDto
 from utils.exceptions import manage_api_call_fail, REASON_FORBIDDEN
 
 
+AUTO_COMMIT_REPO_NAME_REGEX = [
+    'autoCommit', 'auto-commit', 'auto-green', 'GithubCommitFaker',
+    'always_commit_into_git', 'AutoGreen', 'AutoApi', 'GitHubPoster',
+    'commit-auto', 'github-auto-green-bot'
+]
+
+
 class RepositoryService:
     github_adapter = GithubAdapter
     github_api_per_page = 50
@@ -16,7 +23,7 @@ class RepositoryService:
         self.github_user = github_user
         self.total_contribution = 0
         self.total_stargazers_count = 0
-        self.repositories = []  # 업데이트할 레포지토리 리스트
+        self.repositories: List[RepositoryDto] = []  # 업데이트할 레포지토리 리스트
         self.new_repository_list = []  # 새로 생성될 레포지토리 리스트
         self.update_languages = {}  # 업데이트 할 language
 
@@ -250,3 +257,12 @@ class RepositoryService:
     def is_fork_repository(fork: bool):
         """포크한 레포지토리인지 체크"""
         return fork is True
+
+    def has_auto_commit_repository(self) -> bool:
+        """
+        오토커밋 실행하는 레포지토리가 있는지 체크
+        """
+        for repository in self.repositories:
+            for block_name in AUTO_COMMIT_REPO_NAME_REGEX:
+                if repository.name.lower() in block_name.lower():
+                    return True

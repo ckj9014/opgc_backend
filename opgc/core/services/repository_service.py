@@ -264,6 +264,6 @@ class RepositoryService:
         """
         for repository in self.repositories:
             for block_name in AUTO_COMMIT_REPO_NAME_REGEX:
-                if repository.name.lower() in block_name.lower():
+                if repository.name.lower() == block_name.lower():
                     return True
         return False

@@ -58,7 +58,7 @@ class GithubInformationService:
         for repository in self.get_user_repository_urls(user_information):
             repo_service.repositories.append(repo_service.create_dto(repository))
 
-        if repo_service.has_auto_commit_repository():
+        if repo_service.has_auto_commit_repository() is True:
             self.block_user()
 
         # 3. Organization 정보와 연관된 repository 업데이트

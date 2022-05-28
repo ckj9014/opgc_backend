@@ -266,3 +266,4 @@ class RepositoryService:
             for block_name in AUTO_COMMIT_REPO_NAME_REGEX:
                 if repository.name.lower() in block_name.lower():
                     return True
+        return False

@@ -8,6 +8,13 @@ from core.github_dto import RepositoryDto, ContributorDto
 from utils.exceptions import manage_api_call_fail, REASON_FORBIDDEN
 
 
+AUTO_COMMIT_REPO_NAME_REGEX = [
+    'autoCommit', 'auto-commit', 'auto-green', 'GithubCommitFaker',
+    'always_commit_into_git', 'AutoGreen', 'AutoApi', 'GitHubPoster',
+    'commit-auto', 'github-auto-green-bot'
+]
+
+
 class RepositoryService:
     github_adapter = GithubAdapter
     github_api_per_page = 50
@@ -16,7 +23,7 @@ class RepositoryService:
         self.github_user = github_user
         self.total_contribution = 0
         self.total_stargazers_count = 0
-        self.repositories = []  # 업데이트할 레포지토리 리스트
+        self.repositories: List[RepositoryDto] = []  # 업데이트할 레포지토리 리스트
         self.new_repository_list = []  # 새로 생성될 레포지토리 리스트
         self.update_languages = {}  # 업데이트 할 language
 
@@ -141,13 +148,20 @@ class RepositoryService:
     def update_or_create_language(self):
         """
         새로 추가된 언어를 만들고 User 가 사용하는 언어사용 count(byte 수)를 업데이트 해주는 함수
+        todo: 소문자로 저장되도롤 수정
         """
         # DB에 없던 Language 생성
         new_language_list = []
-        exists_languages = set(Language.objects.filter(
+        language_qs = Language.objects.filter(
             type__in=self.update_languages.keys()
-        ).values_list('type', flat=True))
-        new_languages = set(self.update_languages.keys()) - exists_languages
+        ).values_list(
+            'type', flat=True
+        )
+
+        # lower로 변환후 비교
+        update_languages_set = set(k.lower() for k in self.update_languages.keys())
+        exists_languages_set = set(k.lower() for k in language_qs)
+        new_languages = update_languages_set - exists_languages_set
 
         for language in new_languages:
             new_language_list.append(Language(type=language))
@@ -250,3 +264,13 @@ class RepositoryService:
     def is_fork_repository(fork: bool):
         """포크한 레포지토리인지 체크"""
         return fork is True
+
+    def has_auto_commit_repository(self) -> bool:
+        """
+        오토커밋 실행하는 레포지토리가 있는지 체크
+        """
+        for repository in self.repositories:
+            for block_name in AUTO_COMMIT_REPO_NAME_REGEX:
+                if repository.name.lower() == block_name.lower():
+                    return True
+        return False

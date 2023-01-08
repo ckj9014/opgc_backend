@@ -14,7 +14,7 @@ class NotUserType(APIException):
 
 
 class BlockedUser(APIException):
-    status_code = 404
+    status_code = 403
     default_detail = '등록할 수 없는 유저입니다 (Block User)'
     default_code = 'BLOCKED_USER'
 

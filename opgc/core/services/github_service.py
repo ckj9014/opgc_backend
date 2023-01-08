@@ -134,12 +134,13 @@ class GithubInformationService:
         for i in range(0, (self.github_user.public_repos // self.github_api_per_page) + 1):
             params['page'] = i + 1
             repository_info, status_code = self.github_adapter.get_repository_infos(user_information.repos_url, params)
-            repositories.extend(repository_info)
+            if repository_info:
+                repositories.extend(repository_info)
 
         # todo: 레포지토리가 너무 많은경우 한번 프로세스에 async 로 처리하는데 서버 성능이 못따라감.
         #       일단 250개 미만으로 업데이트 하고, 이 부분에 대해서 고민해보기 (일단 리포팅만)
         if len(repositories) > limit_repository_count:
-            capture_exception(Exception(f'[Over Repo] {self.github_user.username} - count : {len(repositories)}'))
+            capture_exception(Exception(f'Repository count is over 250.'))
 
         return repositories[:limit_repository_count]
 

@@ -148,13 +148,20 @@ class RepositoryService:
     def update_or_create_language(self):
         """
         새로 추가된 언어를 만들고 User 가 사용하는 언어사용 count(byte 수)를 업데이트 해주는 함수
+        todo: 소문자로 저장되도롤 수정
         """
         # DB에 없던 Language 생성
         new_language_list = []
-        exists_languages = set(Language.objects.filter(
+        language_qs = Language.objects.filter(
             type__in=self.update_languages.keys()
-        ).values_list('type', flat=True))
-        new_languages = set(self.update_languages.keys()) - exists_languages
+        ).values_list(
+            'type', flat=True
+        )
+
+        # lower로 변환후 비교
+        update_languages_set = set(k.lower() for k in self.update_languages.keys())
+        exists_languages_set = set(k.lower() for k in language_qs)
+        new_languages = update_languages_set - exists_languages_set
 
         for language in new_languages:
             new_language_list.append(Language(type=language))

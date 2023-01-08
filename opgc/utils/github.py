@@ -52,7 +52,7 @@ def get_continuous_commit_day(username: str) -> (bool, int):
             if not rect.get('data-date') or now.date() < datetime.strptime(rect.get('data-date'), '%Y-%m-%d').date():
                 continue
 
-            if not rect.get('data-count') or rect.get('data-count') == '0':
+            if not rect.get('data-level') or rect.get('data-level') == '0':
                 is_commit_aborted = True
                 break
 

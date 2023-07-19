@@ -48,7 +48,7 @@ def get_continuous_commit_day(username: str) -> (bool, int):
             break
 
         soup = BeautifulSoup(res.text, "lxml")  # html.parse 보다 lxml이 더 빠르다고 한다
-        for rect in reversed(soup.select('rect')):
+        for rect in reversed(soup.select('td')):
             if not rect.get('data-date') or now.date() < datetime.strptime(rect.get('data-date'), '%Y-%m-%d').date():
                 continue
 

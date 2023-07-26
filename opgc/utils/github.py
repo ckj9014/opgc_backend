@@ -38,6 +38,7 @@ def get_continuous_commit_day(username: str) -> (bool, int):
     continuous_count = 0
     is_commit_aborted = False  # 1일 1커밋이 중단 됐는지
     is_completed = True  # 크롤링이 정상적으로 완료 되었는지
+    year_commits = {}  # 각 년도별 커밋 정보를 저장하기 위한 딕셔너리
 
     for year in range(now.year, 2007, -1):  # 2007년에 깃허브 오픈
         time.sleep(0.1)  # 429 에러 때문에 약간의 sleep 을 준다.
@@ -48,18 +49,34 @@ def get_continuous_commit_day(username: str) -> (bool, int):
             break
 
         soup = BeautifulSoup(res.text, "lxml")  # html.parse 보다 lxml이 더 빠르다고 한다
+
+        year_commits[year] = []  # 해당 년도의 커밋 정보를 저장할 리스트
+
         for rect in reversed(soup.select('td')):
-            if not rect.get('data-date') or now.date() < datetime.strptime(rect.get('data-date'), '%Y-%m-%d').date():
+            if not rect.get('data-date') or now.date() < datetime.strptime(rect.get('data-date'), '%Y-%m-%d').date() or rect.get('data-level') == '0':
                 continue
 
-            if not rect.get('data-level') or rect.get('data-level') == '0':
-                is_commit_aborted = True
+            commit_date = rect.get('data-date')
+            year_commits[year].append(commit_date)
+
+
+        if not is_commit_aborted:
+            year_commits[year].sort(reverse=True)
+
+            for i in range(len(year_commits[year]) - 1):
+                current_commit_date = year_commits[year][i]
+                next_commit_date = year_commits[year][i + 1]
+
+                current_date = datetime.strptime(current_commit_date, '%Y-%m-%d').date()
+                next_date = datetime.strptime(next_commit_date, '%Y-%m-%d').date()
+
+                if (current_date - next_date).days > 1:     # 날짜가 중간에 끊기면 중단으로 간주
+                    is_commit_aborted = True
+                    break
+                continuous_count += 1
+
+            if is_commit_aborted:
                 break
-
-            continuous_count += 1
-
-        if is_commit_aborted:
-            break
 
     return is_completed, continuous_count
 

@@ -48,18 +48,32 @@ def get_continuous_commit_day(username: str) -> (bool, int):
             break
 
         soup = BeautifulSoup(res.text, "lxml")  # html.parse 보다 lxml이 더 빠르다고 한다
+
+        date_commits = []  # 해당 년도의 커밋 정보를 저장할 리스트
+
         for rect in reversed(soup.select('td')):
-            if not rect.get('data-date') or now.date() < datetime.strptime(rect.get('data-date'), '%Y-%m-%d').date():
+            if not rect.get('data-date') or now.date() < datetime.strptime(rect.get('data-date'), '%Y-%m-%d').date() or rect.get('data-level') == '0':
                 continue
 
-            if not rect.get('data-level') or rect.get('data-level') == '0':
-                is_commit_aborted = True
+            commit_date = rect.get('data-date')
+            date_commits.append(commit_date)
+
+        if not is_commit_aborted:
+            date_commits.sort(reverse=True)
+            next_date = None
+
+            for date_commit in date_commits:
+
+                current_date = datetime.strptime(date_commit, '%Y-%m-%d').date()
+
+                if next_date and (next_date - current_date).days > 1:     # 날짜가 중간에 끊기면 중단으로 간주
+                    is_commit_aborted = True
+                    break
+                continuous_count += 1
+                next_date = current_date
+
+            if is_commit_aborted:
                 break
-
-            continuous_count += 1
-
-        if is_commit_aborted:
-            break
 
     return is_completed, continuous_count
 

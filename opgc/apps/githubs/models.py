@@ -88,7 +88,7 @@ class Repository(CustomBaseModel):
     contribution = models.IntegerField(verbose_name='contribution', default=0)
     stargazers_count = models.IntegerField(default=0)
     name = models.CharField(max_length=100, blank=False)
-    full_name = models.CharField(max_length=100, blank=False)
+    full_name = models.CharField(max_length=500, blank=False)
     owner = models.CharField(max_length=100, blank=False)
     organization = models.CharField(max_length=100, blank=False)
     rep_language = models.CharField(max_length=100, blank=False, default='', help_text='대표언어')

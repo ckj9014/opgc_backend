@@ -66,13 +66,17 @@ class RepositoryDto:
 
     def __init__(self, **kwargs):
         self.name = kwargs.get('name')
-        self.full_name = kwargs.get('full_name')
+        self.full_name = self._set_repository_full_name(kwargs.get('full_name'))
         self.owner = kwargs.get('owner').get('login')
         self.stargazers_count = kwargs.get('stargazers_count')
         self.fork = kwargs.get('fork')
         self.language = kwargs.get('language', '')
         self.contributors_url = kwargs.get('contributors_url')
         self.languages_url = kwargs.get('languages_url')
+
+    @staticmethod
+    def _set_repository_full_name(full_name: str) -> str:
+        return full_name if len(full_name) < 490 else f"{full_name[:490]}..."
 
 
 @dataclass

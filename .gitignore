@@ -2,3 +2,6 @@
 *__pycache__
 *local.py
 media/
+opgc/fabfile.py
+.DS_Store
+db

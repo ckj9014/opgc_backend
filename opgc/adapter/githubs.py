@@ -12,6 +12,7 @@ from sentry_sdk import capture_exception
 
 from core.github_dto import UserInformationDto
 from utils.exceptions import GitHubUserDoesNotExist, json_handler_manager
+from utils.type import convert_dict_key_lower
 
 
 class RequestMethod(Enum):
@@ -156,6 +157,8 @@ class GithubAdapter:
             return None, res.status_code
 
         with json_handler_manager():
-            languages = json.loads(res.content)
+            languages: dict = convert_dict_key_lower(
+                data=json.loads(res.content)
+            )
 
         return languages, res.status_code

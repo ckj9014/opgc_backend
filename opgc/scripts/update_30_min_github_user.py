@@ -6,7 +6,7 @@ from sentry_sdk import capture_exception
 from apps.reservations.models import UpdateUserQueue
 from utils.exceptions import RateLimit
 from core.services.github_service import GithubInformationService
-from utils.slack import SlackService
+from adapter.slack import SlackAdapter
 
 
 def run():
@@ -30,7 +30,7 @@ def run():
     except RateLimit:
         return
 
-    SlackService.slack_update_github_user(status='시작', message='')
+    SlackAdapter.slack_update_github_user(status='시작', message='')
     update_user_count = 0
 
     for user_queue in chunkator(update_user_queue_qs, 1000):
@@ -43,7 +43,7 @@ def run():
 
         except RateLimit:
             # rate limit 면 다른 유저들도 업데이드 못함
-            SlackService.slack_notify_update_fail(
+            SlackAdapter.slack_notify_update_fail(
                 message=f'Rate Limit 로 인해 업데이트가 실패되었습니다. '
                         f'{update_user_count}명만 업데이트 되었습니다.😭'
             )
@@ -53,7 +53,7 @@ def run():
             capture_exception(e)
 
     terminate_time = timeit.default_timer()  # 종료 시간 체크
-    SlackService.slack_update_github_user(
+    SlackAdapter.slack_update_github_user(
         status='완료',
         message=f'업데이트가 {terminate_time - start_time:.2f}초 걸렸습니다.',
         update_user=update_user_count

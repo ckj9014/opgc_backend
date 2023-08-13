@@ -8,7 +8,7 @@ from chunkator import chunkator
 from apps.githubs.models import GithubUser
 from utils.exceptions import RateLimit, GitHubUserDoesNotExist
 from core.services.github_service import GithubInformationService
-from utils.slack import SlackService
+from adapter.slack import SlackAdapter
 
 
 def update_github_basic_information(github_user: GithubUser):
@@ -49,7 +49,7 @@ def run():
         return
 
     start_time = timeit.default_timer()
-    SlackService.slack_update_basic_info(status='시작', message='')
+    SlackAdapter.slack_update_basic_info(status='시작', message='')
     update_user_count = 0
 
     with concurrent.futures.ThreadPoolExecutor() as executor:
@@ -60,7 +60,7 @@ def run():
                 update_user_count += 1
 
             except RateLimit:
-                SlackService.slack_notify_update_fail(
+                SlackAdapter.slack_notify_update_fail(
                     message=f'Rate Limit 로 인해 업데이트가 실패되었습니다. '
                             f'{update_user_count}명만 업데이트 되었습니다.😭'
                 )
@@ -69,7 +69,7 @@ def run():
                 continue
 
     terminate_time = timeit.default_timer()
-    SlackService.slack_update_basic_info(
+    SlackAdapter.slack_update_basic_info(
         status='완료',
         message=f'업데이트가 {terminate_time - start_time:.2f}초 걸렸습니다. '
                 f'🤖 API 호출 남은 횟수 : {rate_limit_check_service.get_rate_remaining()}',

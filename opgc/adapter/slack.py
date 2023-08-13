@@ -4,19 +4,19 @@ from slackweb import slackweb
 from apps.githubs.models import GithubUser
 
 
-class SlackService:
+class SlackAdapter:
     cron_log_channel = settings.SLACK_CHANNEL_CRONTAB
     user_join_channel = settings.SLACK_CHANNEL_JOINED_USER
+    env = 'PROD' if settings.IS_PROD else 'LOCAL'
 
     @classmethod
     def slack_notify_new_user(cls, user: GithubUser, join_type: str = 'Dirty Boyz'):
 
-        server = 'PROD' if settings.IS_PROD else 'LOCAL'
         attachments = [
             {
                 "color": "#36a64f",
                 "title": f"유저 등록({join_type})",
-                "pretext": f"[{server}] 새로운 유저가 등록되었습니다.🎉",
+                "pretext": f"[{cls.env}] 새로운 유저가 등록되었습니다.🎉",
                 "fields": [
                     {
                         "title": "아이디",
@@ -38,8 +38,7 @@ class SlackService:
             }
         ]
 
-        slack = slackweb.Slack(url=cls.user_join_channel)
-        slack.notify(attachments=attachments)
+        cls.send_slack_message(cls.user_join_channel, attachments)
 
     @classmethod
     def slack_notify_update_user_queue(cls, username: str):
@@ -50,22 +49,20 @@ class SlackService:
             {
                 "color": "#ff0000",
                 "title": 'RATE LIMIT 제한으로 update 실패',
-                "pretext": f'[{"PROD" if settings.IS_PROD else "LOCAL"}] {username}이 '
-                           f'Queue(DB)에 등록되었습니다.',
+                "pretext": f'[{cls.env}] {username}이 Queue(DB)에 등록되었습니다.',
             }
         ]
 
-        slack = slackweb.Slack(url=cls.cron_log_channel)
-        slack.notify(attachments=attachments)
+        cls.send_slack_message(cls.cron_log_channel, attachments)
 
     @classmethod
     def slack_notify_update_fail(cls, message: str):
-        slack = slackweb.Slack(url=cls.cron_log_channel)
-        slack.notify(attachments=[{
+        attachments = [{
             "color": "#ff0000",
             "title": '업데이트 실패',
-            "pretext": f'[{"PROD" if settings.IS_PROD else "LOCAL"}] {message}'
-        }])
+            "pretext": f'[{cls.env}] {message}'
+        }]
+        cls.send_slack_message(cls.cron_log_channel, attachments)
 
     @classmethod
     def slack_update_github_user(cls, status: str, message: str, update_user=None):
@@ -87,10 +84,9 @@ class SlackService:
         ]
 
         if message:
-            attachments[0]['pretext'] = f'[{"PROD" if settings.IS_PROD else "LOCAL"}] {message}'
+            attachments[0]['pretext'] = f'[{cls.env}] {message}'
 
-        slack = slackweb.Slack(url=cls.cron_log_channel)
-        slack.notify(attachments=attachments)
+        cls.send_slack_message(cls.cron_log_channel, attachments)
 
     @classmethod
     def slack_update_ranking_system(cls, status: str, message: str):
@@ -105,10 +101,9 @@ class SlackService:
         ]
 
         if message:
-            attachments[0]['pretext'] = f'[{"PROD" if settings.IS_PROD else "LOCAL"}] {message}'
+            attachments[0]['pretext'] = f'[{cls.env}] {message}'
 
-        slack = slackweb.Slack(url=cls.cron_log_channel)
-        slack.notify(attachments=attachments)
+        cls.send_slack_message(cls.cron_log_channel, attachments)
 
     @classmethod
     def slack_update_1day_1commit(cls, status: str, message: str):
@@ -121,10 +116,9 @@ class SlackService:
         }]
 
         if message:
-            attachments[0]['pretext'] = f'[{"PROD" if settings.IS_PROD else "LOCAL"}] {message}'
+            attachments[0]['pretext'] = f'[{cls.env}] {message}'
 
-        slack = slackweb.Slack(url=cls.cron_log_channel)
-        slack.notify(attachments=attachments)
+        cls.send_slack_message(cls.cron_log_channel, attachments)
 
     @classmethod
     def slack_update_older_week_user(cls, status: str, message: str, update_user=None):
@@ -146,10 +140,9 @@ class SlackService:
         ]
 
         if message:
-            attachments[0]['pretext'] = f'[{"PROD" if settings.IS_PROD else "LOCAL"}] {message}'
+            attachments[0]['pretext'] = f'[{cls.env}] {message}'
 
-        slack = slackweb.Slack(url=cls.cron_log_channel)
-        slack.notify(attachments=attachments)
+        cls.send_slack_message(cls.cron_log_channel, attachments)
 
     @classmethod
     def slack_update_basic_info(cls, status: str, message: str, update_user=None):
@@ -171,10 +164,9 @@ class SlackService:
         ]
 
         if message:
-            attachments[0]['pretext'] = f'[{"PROD" if settings.IS_PROD else "LOCAL"}] {message}'
+            attachments[0]['pretext'] = f'[{cls.env}] {message}'
 
-        slack = slackweb.Slack(url=cls.cron_log_channel)
-        slack.notify(attachments=attachments)
+        cls.send_slack_message(cls.cron_log_channel, attachments)
 
     @classmethod
     def slack_notice_block(cls, username: str):
@@ -194,7 +186,12 @@ class SlackService:
             }
         ]
 
-        attachments[0]['pretext'] = f'[{"PROD" if settings.IS_PROD else "LOCAL"}] 블랙리스트 등록'
+        attachments[0]['pretext'] = f'[{cls.env}] 블랙리스트 등록'
+        cls.send_slack_message(cls.cron_log_channel, attachments)
 
-        slack = slackweb.Slack(url=cls.cron_log_channel)
+    @staticmethod
+    def send_slack_message(url: str, attachments: list):
+        if not url:
+            return
+        slack = slackweb.Slack(url=url)
         slack.notify(attachments=attachments)

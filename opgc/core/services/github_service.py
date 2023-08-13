@@ -5,6 +5,7 @@ from django.db.models import Count, Max
 from sentry_sdk import capture_exception
 
 from adapter.githubs import GithubAdapter
+from adapter.slack import SlackAdapter
 from api.exceptions import NotUserType, BlockedUser
 from apps.githubs.models import GithubUser, BlockUser
 from core.github_dto import UserInformationDto, UserType
@@ -12,7 +13,6 @@ from utils.exceptions import RateLimit, insert_queue
 from core.services.organization_service import OrganizationService
 from core.services.repository_service import RepositoryService
 from utils.github import get_continuous_commit_day
-from utils.slack import SlackService
 
 
 class GithubInformationService:
@@ -37,7 +37,7 @@ class GithubInformationService:
         """
         self.github_user.delete()
         BlockUser.objects.get_or_create(username=self.username)
-        SlackService.slack_notice_block(username=self.username)
+        SlackAdapter.slack_notice_block(username=self.username)
         raise BlockedUser()
 
     def update(self):
@@ -115,7 +115,7 @@ class GithubInformationService:
                 following=user_information.following
             )
             # todo: 비동기 (rabbitMQ)
-            SlackService.slack_notify_new_user(github_user)
+            SlackAdapter.slack_notify_new_user(github_user)
 
         return github_user
 

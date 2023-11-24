@@ -1,0 +1,43 @@
+name: PR merge Checker
+
+on:
+  pull_request:
+    branches: [main, master, 'release/**']
+    types: [opened, reopened]
+  pull_request_review:
+    types: [ submitted ]
+
+jobs:
+  pr-on:
+    runs-on: ubuntu-latest
+    steps:
+      - name: base branch is release
+        if: ${{ startsWith(github.base_ref, 'release/') }}
+        uses: peter-evans/create-or-update-comment@v3
+        with:
+          issue-number: ${{ github.event.pull_request.number }}
+          body: |
+            개발자 친구들~ release 브랜치에는 스쿼시 머지 해야쥬!🫠 
+          reactions: rocket
+
+      - name: base branch is main
+        if: ${{ github.base_ref == 'main' }}
+        uses: peter-evans/create-or-update-comment@v3
+        with:
+          issue-number: ${{ github.event.pull_request.number }}
+          body: |
+            개발자 친구들~ master(main) 브랜치에는 merge commit을 해야쥬 🫠
+          reactions: rocket
+
+  approved:
+    if: github.event.review.state == 'APPROVED'
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "This PR was approved"
+      - name: approve submit
+        uses: peter-evans/create-or-update-comment@v3
+        with:
+          issue-number: ${{ github.event.pull_request.number }}
+          body: |
+            어프로브 했다
+          reactions: rocket
